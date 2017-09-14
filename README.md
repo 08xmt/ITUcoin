@@ -25,9 +25,9 @@ This block is off the chain, yo.
   Week 2: Resilient Peer-to-Peer
   Week 3: Wallets and transactions
  
-3. Development enviroment
-    Github
-    Issue tracking
-    Relevant Python libraries
-    Overleaf report
+3. Development enviroment   
+    Github  
+    Issue tracking   
+    Relevant Python libraries   
+    Overleaf report    
 
