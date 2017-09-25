@@ -22,7 +22,7 @@ class Node:
         self.blockchain.append(genesis_block)
         while True:
             prev_block = self.blockchain[-1]
-            correct_block = self.guess_hash(prev_block.block_header_hash, 17, self.merkle_root)
+            correct_block = self.guess_hash(prev_block.block_header_hash, 22, self.merkle_root)
             if correct_block:
                 self.current_nonce = 0
                 self.create_block(correct_block)
