@@ -1,0 +1,4 @@
+#Transactions:
+###Many-to-many
+
+###Bitcoin Transaction Script Language --> https://en.bitcoin.it/wiki/Script
