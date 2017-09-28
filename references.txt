@@ -1,0 +1,5 @@
+Hash, Transactions and Merkletrees:
+https://www.youtube.com/watch?v=N_IPsz0OjvM&index=1&list=PLz3iwtnWFin9eCMLr5ecphy7rHQNeMheE
+https://en.bitcoin.it/wiki/Transaction
+https://en.bitcoin.it/wiki/Script
+
