@@ -122,11 +122,11 @@ class Node(object):
             if balance_out > balance_in:
                 return False
         return True
-    
+
     def sig_valid(self, signature, message, public_key):
         vk = VerifyingKey.from_string(bytes.fromhex(public_key), curve=ecdsa.SECP256k1)
         return vk.verify(bytes.fromhex(sig), message)
-        
+
 
     def generate_transaction(self, private_key, from_public_key, to_public_key, amount, tx_fee, message = b"ITUCOIN"):
         sk = SigningKey.from_string(private_key, curve=ecdsa.SECP256k1)
@@ -144,7 +144,7 @@ class Node(object):
                 break
         if balance < amount:
             raise Exception('Balance too low to send transaction.')
-        
+
         sent_sig = sk.sign(str(to_public_key), str(amount))
         output_list.append(Output(to_public_key, amount,sent_sig))
         if balance - amount > 0:
@@ -154,7 +154,7 @@ class Node(object):
         output_list.append(Output(from_public_key, tx_fee, fee_sig))
 
         return Transaction(signature, input_list, output_list, message)
-    
+
     def hash_valid(self, hash, nBits):
         byte_idx = math.floor(nBits/8)
         for byte in hash[:byte_idx]:
@@ -172,6 +172,3 @@ if __name__ == "__main__":
     node = Node(vk_hex, sk_hex)
 
     node.main()
-
-
-
