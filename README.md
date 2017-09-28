@@ -18,7 +18,7 @@ This block is off the chain, yo.
  
  | | | | | | | | | | | | |
  |-|-|-|-|-|-|-|-|-|-|-|-|
- |1.1/1.5|1.2/(1.4)|report|1.4|1.6|report|1.3|1.7|report|report|report|report|
+ |1.1/1.5|1.2|report|1.4|1.6|report|1.3|1.7|report|report|report|report|
  
  Medium articles:
   Week 1: Blockchain basics
