@@ -60,8 +60,6 @@ class MerkleTree:
         other_reverse = list(reversed(merkle_tree.past_transactions.items()))
         self_len = len(self_reverse)
         other_len = len(other_reverse)
-        print(self_len)
-        print(len(self.list_of_transactions))
         if self_len > other_len:
             return self_reverse[other_len:other_len+math.floor(other_len/2)]
         elif self_len < other_len:
