@@ -46,19 +46,9 @@ class MerkleTree:
         #last_key = self.past_transactions.keys()[-1]
         return next(reversed(self.merkle_tree_transactions))
 
-
-# Declare the main part of the function to run
-if __name__ == "__main__":
-# a) Create the new class of Jae_MerkTree
-    Jae_Tree = MerkleTree()
-
     def get_past_transaction(self):
         return self.past_transactions
 
-    def get_root(self):
-        #last_key = self.past_transactions.keys()[-1]
-        return next(reversed(self.past_transaction))
-    
     def conflicting_txs(self, merkle_tree):
         """ Return conflicting transactions between different MerkleTree objects
         Args:
