@@ -17,7 +17,6 @@ class Transaction:
         return str(self.locktime) + str(self.message) + str(self.signature)
 
     def get_hash(self):
-
         string_inputs = ""
         string_outputs = ""
         hasher = hashlib.sha3_256()
@@ -27,6 +26,21 @@ class Transaction:
             string_outputs += str(output)
         hasher.update((str(self) + string_inputs + string_outputs).encode('utf-8'))
         return hasher.digest()
+
+    def get_as_dict(self):
+        tx_inputs = []
+        tx_outputs = []
+
+        for input in self.inputs:
+            tx_inputs.append(input.as_list())
+
+        for output in self.outputs:
+            tx_outputs.append(output.as_list())
+
+        transaction_dict = {"locktime", self.locktime, "inputs", tx_inputs, "outputs", tx_outputs, "signature",
+                            self.signature, "message", self.message, "amount", self.amount, "coinbase", self.coinbase}
+        return {self.get_hash(), transaction_dict}
+
 
 class Input:
 
@@ -38,6 +52,9 @@ class Input:
     def __str__(self):
         return str(self.previous_tx_hash) + str(self.from_public_key) + str(self.signature)
 
+    def as_list(self):
+        return [str(self.previous_tx_hash), str(self.from_public_key), str(self.signature)]
+
     def get_hash(self):
         hasher = hashlib.sha3_256()
         hasher.update(str(self).encode('utf-8'))
@@ -46,6 +63,7 @@ class Input:
     def sig_valid(self, public_key):
         vk = VerifyingKey.from_string(bytes.fromhex(public_key), curve=ecdsa.SECP256k1)
         return vk.verify(bytes.fromhex(str(self.signature)))
+
 
 class Output:
 
@@ -60,6 +78,14 @@ class Output:
             return str(True) + str(self.value)
         else:
             return str(self.to_public_key) + str(self.value) + str(self.signature)
+
+
+    def as_list(self):
+        if self.tx_fee:
+            return [str(True), str(self.value)]
+        else:
+            return [str(self.to_public_key), str(self.value), str(self.signature)]
+
 
     def get_hash(self):
         hasher = hashlib.sha3_256()

@@ -4,15 +4,19 @@ import hashlib,json
 from collections import OrderedDict
 
 class MerkleTree:
-    past_transactions = OrderedDict()
-    
+    merkle_tree_transactions = OrderedDict()
+
+    def __str__(self):
+        return self.get_root()
+
+
     def __inint__(self, list_of_transactions=None):
         self.list_of_transactions = list_of_transactions
 
     def create_tree(self):
         
         temp_transactions = []
-        past_transactions = self.past_transactions
+        past_transactions = self.merkle_tree_transactions
 
         #Run through all the transaction and create the merkle tree 
         for index in range(0, len(self.list_of_transactions), 2):
@@ -25,7 +29,7 @@ class MerkleTree:
             if index+1 != len(self.list_of_transactions):
                 node_right = self.list_of_transactions[index+1]
                 node_right_hash = hashlib.sha3_256(node_right.encode('utf-8'))
-                self.past_transactions[self.list_of_transactions[index+1]] = node_right_hash.hexdigest()
+                self.merkle_tree_transactions[self.list_of_transactions[index+1]] = node_right_hash.hexdigest()
                 temp_transactions.append(node_left_hash.hexdigest() + node_right_hash.hexdigest())
 
             else:
@@ -38,17 +42,16 @@ class MerkleTree:
 
             self.create_tree()
 
-    def get_past_transaction(self):
-        return self.past_transactions
+    def get_merkle_tree_transactions(self):
+        return self.merkle_tree_transactions
 
     def get_root(self):
         #last_key = self.past_transactions.keys()[-1]
-        return next(reversed(self.past_transactions))
+        return next(reversed(self.merkle_tree_transactions))
 
-"""
+
 # Declare the main part of the function to run
 if __name__ == "__main__":
-
 	# a) Create the new class of Jae_MerkTree
 	Jae_Tree = MerkleTree()
 
@@ -62,7 +65,7 @@ if __name__ == "__main__":
 	Jae_Tree.create_tree()
 
 	# e) Retrieve the transaction 
-	past_transaction = Jae_Tree.get_past_transaction()
+	past_transaction = Jae_Tree.get_merkle_tree_transactions()
 
 	# f) Get the last transaction and print all 
 	print("First Example - Even number of transaction Merkel Tree")
@@ -76,7 +79,7 @@ if __name__ == "__main__":
 	transaction = ['a','b','c','d','e']
 	Jae_Tree.list_of_transactions = transaction
 	Jae_Tree.create_tree()
-	past_transaction = Jae_Tree.get_past_transaction()
+	past_transaction = Jae_Tree.get_merkle_tree_transactions()
 	print('Final root of the tree : ',Jae_Tree.get_root())
 	print(json.dumps(past_transaction, indent=4))
 	print("-" * 50)
@@ -89,7 +92,7 @@ if __name__ == "__main__":
 	ground_truth_transaction = ['a','b','c','d','e']
 	ground_truth_Tree.list_of_transactions = ground_truth_transaction
 	ground_truth_Tree.create_tree()
-	ground_truth_past_transaction = ground_truth_Tree.get_past_transaction()
+	ground_truth_past_transaction = ground_truth_Tree.get_merkle_tree_transactions()
 	ground_truth_root = ground_truth_Tree.get_root()
 
 	# i-2) Declare a tampered transaction
@@ -97,7 +100,7 @@ if __name__ == "__main__":
 	tampered_Tree_transaction = ['a','b','c','d','f']
 	tampered_Tree.list_of_transactions = tampered_Tree_transaction
 	tampered_Tree.create_tree()
-	tampered_Tree_past_transaction = tampered_Tree.get_past_transaction()
+	tampered_Tree_past_transaction = tampered_Tree.get_merkle_tree_transactions()
 	tampered_Tree_root = tampered_Tree.get_root()
 
 	# i-3) The three company share all of the transaction 
@@ -111,4 +114,3 @@ if __name__ == "__main__":
 	
 	print("\n\nTamper Truth past Transaction ")
 	print(json.dumps(tampered_Tree_past_transaction, indent=4))
-"""

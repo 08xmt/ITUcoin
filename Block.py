@@ -1,13 +1,17 @@
 import time
+from MerkleTree import MerkleTree
+
+
 class Block:
-    def __init__(self, nonce, block_header_hash, previous_block_header_hash, transactions, merkle_root, time=time.time()):
+    def __init__(self, nonce, block_header_hash, previous_block_header_hash, transactions, time=time.time()):
         self.time = time
         self.nonce = nonce
         self.previous_block_header_hash = previous_block_header_hash
         self.block_header_hash = block_header_hash
         self.transactions = transactions
-        self.merkle_root_hash = merkle_root
-        self.merkle_tree = None
+        merkle_tree = MerkleTree()
+        merkle_tree.list_of_transactions = self.transactions
+        merkle_tree.create_tree
+        self.merkle_tree = merkle_tree
 
-    def update_merkle_tree(self):
-        pass
+

@@ -28,7 +28,7 @@ class Node(object):
         #Generate genesis_hash, used temporarily as the base
         genesis_hash = self.guess_hash(self.merkle_root, 0, self.merkle_root)
         print("GenesisHas: ", genesis_hash[0])
-        genesis_block = Block(genesis_hash[1], genesis_hash[0], genesis_hash[1], self.transactions, self.merkle_root)
+        genesis_block = Block(genesis_hash[1], genesis_hash[0], genesis_hash[1], self.transactions)
         self.blockchain.append(genesis_block)
         while True:
             prev_block = self.blockchain[-1]
