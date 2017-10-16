@@ -21,18 +21,26 @@ class MerkleTree:
         for index in range(0, len(self.list_of_transactions), 2):
             #construct left node
             node_left = self.list_of_transactions[index]
-            node_left_hash =  hashlib.sha3_256(node_left.encode('utf-8'))
-            self.past_transactions[self.list_of_transactions[index]] = node_left_hash.hexdigest()
+            node_left_hash = ""
+            if isinstance(node_left, str):
+                node_left_hash = hashlib.sha3_256(node_left.encode('utf-8')).hexdigest()
+            else:
+                node_left_hash = node_left.get_hash()
+            self.past_transactions[self.list_of_transactions[index]] = node_left_hash
 
             #construct right node
             if index+1 != len(self.list_of_transactions):
                 node_right = self.list_of_transactions[index+1]
-                node_right_hash = hashlib.sha3_256(node_right.encode('utf-8'))
-                self.merkle_tree_transactions[self.list_of_transactions[index+1]] = node_right_hash.hexdigest()
-                temp_transactions.append(node_left_hash.hexdigest() + node_right_hash.hexdigest())
+                node_left_hash = hashlib.sha3_256("".encode('utf-8')).hexdigest()
+                if isinstance(node_left, str):
+                    node_right_hash = hashlib.sha3_256(node_right.encode('utf-8')).hexdigest()
+                else:               
+                    node_right_hash = node_right.get_hash()
+                self.merkle_tree_transactions[self.list_of_transactions[index+1]] = node_right_hash
+                temp_transactions.append(node_left_hash + node_right_hash)
 
             else:
-                temp_transactions.append(node_left_hash.hexdigest())
+                temp_transactions.append(node_left_hash)
 
 
         if len(self.list_of_transactions) > 1:
@@ -44,7 +52,7 @@ class MerkleTree:
 
     def get_root(self):
         #last_key = self.past_transactions.keys()[-1]
-        return next(reversed(self.merkle_tree_transactions))
+        return self.past_transactions[next(reversed(self.past_transactions))]
 
     def get_past_transaction(self):
         return self.past_transactions

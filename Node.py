@@ -5,6 +5,7 @@ import math
 from Transaction import Transaction, Input, Output
 import ecdsa
 from ecdsa import SigningKey, VerifyingKey
+from MerkleTree import MerkleTree
 
 
 class Node(object):
@@ -22,12 +23,14 @@ class Node(object):
         first_output = Output(mining_address, self.blockreward, self.mining_sk.sign((str(self.mining_address) + str(self.blockreward)).encode('utf-8')))
         first_transaction = Transaction(self.mining_sk.sign(b"coinbase"),[],[first_output],"coinbase",self.blockreward,coinbase=True)
         self.transactions = [first_transaction]
-        self.merkle_root = b'N\x16\x9d\xdfG\x9c\x8c\xd9\xb4\xc4^\x02\x84\x18\x170\xcbB\xdf:\x8b\xe8\x92\xa7\xf3y\xbdi\r\xb1\xea\xfa'
+        self.merkle_tree = MerkleTree(list_of_transactions=self.transactions)
+        self.merkle_tree.create_tree()
+        self.merkle_root = self.merkle_tree.get_root()
 
     def main(self):
         #Generate genesis_hash, used temporarily as the base
         genesis_hash = self.guess_hash(self.merkle_root, 0, self.merkle_root)
-        print("GenesisHas: ", genesis_hash[0])
+        print("GenesisHash: ", genesis_hash[0])
         genesis_block = Block(genesis_hash[1], genesis_hash[0], genesis_hash[1], self.transactions)
         self.blockchain.append(genesis_block)
         while True:
@@ -39,9 +42,11 @@ class Node(object):
 
                 mining_reward_output = Output(self.mining_address, self.blockreward, self.mining_sk.sign((str(self.mining_address) + str(self.blockreward)).encode('utf-8')))
                 mining_reward = Transaction(self.mining_sk.sign(b"coinbase"),[],[mining_reward_output],"coinbase",self.blockreward,coinbase=True)
+                for tx in self.transactions:
+                    print("Amount: ", tx.amount, "Message: ", tx.message)  
                 self.transactions = []
                 self.add_transaction(mining_reward)
-                print(codecs.encode(prev_block.block_header_hash,'hex'))
+                print("Previous blockheader: ", prev_block.block_header_hash)
 
     def confirm_block(self, block):
         # First transaction needs to be a coinbase transaction
@@ -70,8 +75,11 @@ class Node(object):
 
     def add_transaction(self, transaction):
         self.transactions.append(transaction)
-        self.transaction_hasher.update(transaction.get_hash())
-        self.transaction_hash = self.transaction_hasher.digest()
+        self.transaction_hasher.update(transaction.get_hash().encode('utf-8'))
+        self.transaction_hash = self.transaction_hasher.hexdigest()
+        self.merkle_tree = MerkleTree(list_of_transactions=self.transactions)
+        self.merkle_tree.create_tree()
+        self.merkle_root = self.merkle_tree.get_root()
 
     def add_block(self, correctBlock):
         prev_block = self.blockchain[-1]
@@ -84,11 +92,11 @@ class Node(object):
     def guess_hash(self, previous_block_header_hash, nBits, merkle_root):
         hash_guess = hashlib.sha3_256()
         nonce = self.random_nonce()
-        hash_guess.update(previous_block_header_hash)
-        hash_guess.update(merkle_root)
+        hash_guess.update(previous_block_header_hash.encode('utf-8'))
+        hash_guess.update(merkle_root.encode('utf-8'))
         hash_guess.update(nonce)
         if self.hash_valid(hash_guess.digest(), nBits):
-            return [hash_guess.digest(), nonce]
+            return [hash_guess.hexdigest(), nonce]
         else:
             return False
 
@@ -153,6 +161,10 @@ class Node(object):
         output_list.append(Output(from_public_key, tx_fee, fee_sig))
 
         return Transaction(signature, input_list, output_list, message)
+
+    def generate_and_add_transaction(self, private_key, from_public_key, to_public_key, amount, tx_fee, message = b"ITUCOIN"):
+        tx = self.generate_transaction(private_key, from_public_key, to_public_key, amount, tx_fee, message)
+        self.add_transaction(tx)
 
     def hash_valid(self, hash, nBits):
         byte_idx = math.floor(nBits/8)

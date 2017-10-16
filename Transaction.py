@@ -25,7 +25,7 @@ class Transaction:
         for output in self.outputs:
             string_outputs += str(output)
         hasher.update((str(self) + string_inputs + string_outputs).encode('utf-8'))
-        return hasher.digest()
+        return hasher.hexdigest()
 
     def get_as_dict(self):
         tx_inputs = []
@@ -58,7 +58,7 @@ class Input:
     def get_hash(self):
         hasher = hashlib.sha3_256()
         hasher.update(str(self).encode('utf-8'))
-        return hasher.digest()
+        return hasher.hexdigest()
 
     def sig_valid(self, public_key):
         vk = VerifyingKey.from_string(bytes.fromhex(public_key), curve=ecdsa.SECP256k1)
@@ -79,18 +79,16 @@ class Output:
         else:
             return str(self.to_public_key) + str(self.value) + str(self.signature)
 
-
     def as_list(self):
         if self.tx_fee:
             return [str(True), str(self.value)]
         else:
             return [str(self.to_public_key), str(self.value), str(self.signature)]
 
-
     def get_hash(self):
         hasher = hashlib.sha3_256()
         hasher.update(str(self).encode('utf-8'))
-        return hasher.digest()
+        return hasher.hexdigest()
 
     def sig_valid(self, public_key):
         vk = VerifyingKey.from_string(bytes.fromhex(public_key), curve=ecdsa.SECP256k1)
