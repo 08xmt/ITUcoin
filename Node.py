@@ -32,7 +32,7 @@ class Node(object):
         self.blockchain.append(genesis_block)
         while True:
             prev_block = self.blockchain[-1]
-            correct_block = self.guess_hash(prev_block.block_header_hash, 18, self.merkle_root)
+            correct_block = self.guess_hash(prev_block.block_header_hash, 15, self.merkle_root)
             if correct_block:
                 self.current_nonce = 0
                 self.add_block(correct_block)
@@ -42,7 +42,6 @@ class Node(object):
                 self.transactions = []
                 self.add_transaction(mining_reward)
                 print(codecs.encode(prev_block.block_header_hash,'hex'))
-                print(self.balance_ledger[self.mining_address])
 
     def confirm_block(self, block):
         # First transaction needs to be a coinbase transaction
