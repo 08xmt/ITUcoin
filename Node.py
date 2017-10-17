@@ -8,6 +8,7 @@ from ecdsa import SigningKey, VerifyingKey
 
 
 class Node(object):
+    block_height_counter = 0
 
     def __init__(self, mining_address, private_key):
         self.blockchain = []
@@ -28,7 +29,8 @@ class Node(object):
         #Generate genesis_hash, used temporarily as the base
         genesis_hash = self.guess_hash(self.merkle_root, 0, self.merkle_root)
         print("GenesisHas: ", genesis_hash[0])
-        genesis_block = Block(genesis_hash[1], genesis_hash[0], genesis_hash[1], self.transactions)
+        genesis_block = Block(genesis_hash[1], genesis_hash[0], genesis_hash[1], self.transactions, self.block_height_counter)
+        self.block_height_counter += 1;
         self.blockchain.append(genesis_block)
         while True:
             prev_block = self.blockchain[-1]
@@ -76,7 +78,8 @@ class Node(object):
 
     def add_block(self, correctBlock):
         prev_block = self.blockchain[-1]
-        block = Block(correctBlock[1], correctBlock[0], prev_block.block_header_hash, self.transactions, self.merkle_root)
+        block = Block(correctBlock[1], correctBlock[0], prev_block.block_header_hash, self.transactions, block_height=self.block_height_counter)
+        self.block_height_counter += 1;
         if self.confirm_block(block):
             for transaction in block.transactions:
                 self.update_ledgers(transaction)
