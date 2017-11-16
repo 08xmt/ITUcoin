@@ -5,10 +5,14 @@ import math
 from Transaction import Transaction, Input, Output
 import ecdsa
 from ecdsa import SigningKey, VerifyingKey
+from InputOutput import LoadBlockchain
 
 
 class Node(object):
     block_height_counter = 0
+    block_difficulty = 0 #amount of leading zeroes
+    time_threshold_seconds = 60 #Arbitrary number. Arguments can be made for higher or lower value
+    blocks_between_difficulty_check = 2016
 
     def __init__(self, mining_address, private_key):
         self.blockchain = []
@@ -166,6 +170,35 @@ class Node(object):
         if hash[byte_idx] < 2 ** (8 - (nBits % 8)) - 1:
             return True
         return False
+
+
+    def adjustDiffilcuty(self, c_block):
+        return None
+
+
+    def getBlockTimesList(self, c_block):
+        io = LoadBlockchain()
+        height = c_block.block_height
+        times = []
+        for block_number in range(height - self.blocks_between_difficulty_check, height):
+            block = io.get_block(block_number)
+            times.append(block.time)
+
+        return times
+
+    @classmethod
+    def getAverageBlockTime(self, times):
+        time_sum = 0
+        print(times)
+        for index in range(len(times)-1):
+            time1 = times[index]
+            time2 = times[index+1]
+
+            time_sum += (time2-time1)
+
+        average_time = int(round(time_sum/self.blocks_between_difficulty_check))
+        return average_time
+
 
 if __name__ == "__main__":
     sk = SigningKey.generate(curve=ecdsa.SECP256k1)
