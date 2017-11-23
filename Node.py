@@ -12,6 +12,7 @@ class Node(object):
     block_height_counter = 0
     block_difficulty = 0 #amount of leading zeroes
     time_threshold_seconds = 60 #Arbitrary number. Arguments can be made for higher or lower value
+    expected_time_between_blocks = 10 * 60
     blocks_between_difficulty_check = 2016
 
     def __init__(self, mining_address, private_key):
@@ -40,6 +41,7 @@ class Node(object):
             prev_block = self.blockchain[-1]
             correct_block = self.guess_hash(prev_block.block_header_hash, 18, self.merkle_root)
             if correct_block:
+
                 self.current_nonce = 0
                 self.add_block(correct_block)
 
@@ -88,6 +90,10 @@ class Node(object):
             for transaction in block.transactions:
                 self.update_ledgers(transaction)
             self.blockchain.append(block)
+            #Adjust difficulty
+            if block.block_height % self.blocks_between_difficulty_check == 0:
+                self.adjustDifficulty(block)
+
 
     def guess_hash(self, previous_block_header_hash, nBits, merkle_root):
         hash_guess = hashlib.sha3_256()
@@ -171,9 +177,17 @@ class Node(object):
             return True
         return False
 
+    """
+    difficulty adjustment methods
+    """
 
-    def adjustDiffilcuty(self, c_block):
-        return None
+    def adjustDifficulty(self, c_block):
+        average_time = self.getAverageBlockTime(self.getBlockTimesList(c_block))
+        if average_time > self.expected_time_between_blocks+self.time_threshold_seconds:
+            self.block_difficulty -= 1 #Make it easier
+        elif average_time < self.expected_time_between_blocks-self.time_threshold_seconds:
+            self.block_difficulty += 1 #make it harder
+        return self.block_difficulty
 
 
     def getBlockTimesList(self, c_block):
@@ -189,7 +203,6 @@ class Node(object):
     @classmethod
     def getAverageBlockTime(self, times):
         time_sum = 0
-        print(times)
         for index in range(len(times)-1):
             time1 = times[index]
             time2 = times[index+1]
