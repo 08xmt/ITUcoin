@@ -1,9 +1,8 @@
-import time
 from MerkleTree import MerkleTree
 import json
 
 class Block:
-    def __init__(self, nonce, block_header_hash, previous_block_header_hash, transactions, block_height, time=time.time()):
+    def __init__(self, nonce, block_header_hash, previous_block_header_hash, transactions, block_height, time):
         self.time = time
         self.nonce = nonce
         self.previous_block_header_hash = previous_block_header_hash

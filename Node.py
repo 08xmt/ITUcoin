@@ -3,7 +3,7 @@ import codecs
 from Block import Block
 import math
 from Transaction import Transaction, Input, Output
-import ecdsa
+import ecdsa, time
 from ecdsa import SigningKey, VerifyingKey
 from InputOutput import LoadBlockchain
 
@@ -84,12 +84,13 @@ class Node(object):
 
     def add_block(self, correctBlock):
         prev_block = self.blockchain[-1]
-        block = Block(correctBlock[1], correctBlock[0], prev_block.block_header_hash, self.transactions, block_height=self.block_height_counter)
+        block = Block(correctBlock[1], correctBlock[0], prev_block.block_header_hash, self.transactions, block_height=self.block_height_counter, time=correctBlock[2])
         self.block_height_counter += 1;
         if self.confirm_block(block):
             for transaction in block.transactions:
                 self.update_ledgers(transaction)
             self.blockchain.append(block)
+
             #Adjust difficulty
             if block.block_height % self.blocks_between_difficulty_check == 0:
                 self.adjustDifficulty(block)
@@ -98,11 +99,13 @@ class Node(object):
     def guess_hash(self, previous_block_header_hash, nBits, merkle_root):
         hash_guess = hashlib.sha3_256()
         nonce = self.random_nonce()
+        epoch_time = time.time()
         hash_guess.update(previous_block_header_hash)
         hash_guess.update(merkle_root)
         hash_guess.update(nonce)
+        hash_guess.update(epoch_time)
         if self.hash_valid(hash_guess.digest(), nBits):
-            return [hash_guess.digest(), nonce]
+            return [hash_guess.digest(), nonce, epoch_time]
         else:
             return False
 
