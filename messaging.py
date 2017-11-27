@@ -125,8 +125,9 @@ class messaging:
     def receive_tx(self,address):
         message, sender = self.server.received()
         if message:
-            tx = transaction.construct_from_raw(message)
-            server.send(address, ok)
+            tx = transaction.create_from_string(message)
+            print(str(tx))
+            server.send(address, b'ok')
         else:
             return None
 
