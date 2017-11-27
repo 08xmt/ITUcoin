@@ -17,16 +17,24 @@ class Transaction:
 
     @classmethod
     def create_from_string(cls, transaction_as_string):
-        dict = json.loads(transaction_as_string)
-        dict = next(iter(dict.values()))
-        return Transaction(signature=dict['signature'],
-                           input_list=dict['inputs'],
-                           output_list=dict['outputs'],
-                           message=dict['message'],
-                           amount=dict['amount'],
-                           locktime=dict['locktime'],
-                           coinbase=dict['coinbase'],
-                           fee_pr_byte=dict['fee_pr_byte'])
+        tx_dict = json.loads(transaction_as_string)
+        tx_dict = next(iter(tx_dict.values()))
+        
+        #Last input and output will always be whitespace
+        inputs = [Input.load_from_string(i) for i in tx_dict["inputs"].split("|")[:-1]]
+        outputs = [Output.load_from_string(i) for i in tx_dict["outputs"].split("|")[:-1]]
+        
+        tx_dict['inputs'] = inputs
+        tx_dict['outputs'] = outputs
+            
+        return Transaction(signature=tx_dict['signature'],
+                           input_list=tx_dict['inputs'],
+                           output_list=tx_dict['outputs'],
+                           message=tx_dict['message'],
+                           amount=tx_dict['amount'],
+                           locktime=tx_dict['locktime'],
+                           coinbase=tx_dict['coinbase'],
+                           fee_pr_byte=tx_dict['fee_pr_byte'])
 
 
     def __str__(self):
@@ -65,17 +73,14 @@ class Transaction:
         return self.size()*self.fee_pr_byte
 
     def tx_to_string(self):
+        tx_inputs = ""
 
-        tx_inputs = "["
         for input in self.inputs:
-            tx_inputs += input.as_string()
-
-        tx_inputs += "]"
-
-        tx_outputs = "["
+            tx_inputs += input.as_string() + "|"
+        
+        tx_outputs = ""
         for output in self.outputs:
-            tx_outputs += output.as_string()
-        tx_outputs += "]"
+            tx_outputs += output.as_string() + "|"
 
         transaction_dict = {"locktime": self.locktime,
                             "inputs": tx_inputs,
@@ -107,6 +112,7 @@ class Input:
     @classmethod
     def load_from_string(cls, input_string):
         inputs = input_string.split(',')
+        print(input_string)
         return Input(inputs[0], inputs[1], inputs[2])
 
     def as_string(self):

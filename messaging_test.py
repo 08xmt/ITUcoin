@@ -26,6 +26,17 @@ def new_tx(s, a, tx):
     s.send(a, b"new tx")
     message, sender = s.receive(a, expected_message = "ok")
     s.send(a, str(tx).encode())
+    message, sender = s.receive(a, expected_message = "ok")
+
+def new_block(s, a, block):
+    s.send(a, b"new block")
+    message, sender = s.receive(a, expected_message = "ok")
+    s.send(a, block.block_header_string().encode())
+    message, sender = s.receive(a, expected_message = "ok")
+    for tx in block.transaction_list():
+        s.send(a, tx.encode())
+        message, sender = s.receive(a, expected_message = "ok")
+    s.send(a, b"end transmission")
 
 if __name__ == '__main__':
     s = server(9999,20)
@@ -63,4 +74,7 @@ if __name__ == '__main__':
 
     #print(get_node(s, a))
 
-    new_tx(s, a, tx1)
+    #new_tx(s, a, tx1)
+
+    new_block(s, a, block)
+

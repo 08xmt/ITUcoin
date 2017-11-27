@@ -17,12 +17,11 @@ class messaging:
         message = data
         print("Received " + message)
         if message == 'ping':
-            print(message, sender)
             self.server.send(sender, b'ping')
 
         elif message == 'new block':
             self.server.send(sender, b'ok')
-            block = self.server.receive_block(sender)
+            block = self.receive_block(sender)
             #TODO: Add block to state
 
         elif message == 'new tx':
@@ -125,36 +124,31 @@ class messaging:
 
     def receive_tx(self,address):
         message, sender = self.server.receive()
-        if message:
+        if message and message != "end transmission":
             tx = Transaction.create_from_string(message)
-            print(str(tx))
-            server.send(address, b'ok')
+            self.server.send(address, b'ok')
+            return tx
         else:
             return None
 
     def receive_block(self, address):
-        raw_header = server.receive()
-        if raw_header:
-            self.server.send(str(block_id).encode())
-            raw_txs = []
-            receiving = True
-            while receiving:
-                raw_tx = server.receive()
-                if raw_tx == b'end transmission':
-                    receiving = False
+        header, sender = self.server.receive()
+        if header:
+            self.server.send(sender, b'ok')
+            txs = []
+            while True:
+                tx = self.receive_tx(sender)
+                if tx:
+                    txs.append(tx)
                 else:
-                    self.server.send(address, b'ok') #Acknowledge with tx hash?
-                    raw_txs.append(raw_tx) #TODO: Validate transactions before adding them
-            return block.construct_from_raw(raw_header, raw_txs)
-        else:
-            dead_nodes.append(address)
+                    break
+            return block.create_from_string(header, txs)
 
     def receive_nodes(self, address):
         #TODO: Add filter to remove all non-ip addresses
         receiving = True
         while receiving:
             message, sender = self.server.receive()
-            print(message.split(",")[0])
             new_node = (message.split(",")[0], int(message.split(",")[1]))
             if message == "end transmission":
                 receiving = False
@@ -179,8 +173,8 @@ class messaging:
 
     def send_block_header(self, address, block):
         block_header = str(block)
-        server.send(address, block_header)
-        return server.receive(block.block_header_hash.encode())
+        self.server.send(address, block_header)
+        return self.server.receive(block.block_header_hash.encode())
          
     def send_block(self, address, block):
         if self.send_block_header(address, block):
