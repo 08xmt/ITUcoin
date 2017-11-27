@@ -104,6 +104,11 @@ class Input:
     def __str__(self):
         return str(self.previous_tx_hash) + "," + str(self.from_public_key) + "," + str(self.signature)
 
+    @classmethod
+    def load_from_string(cls, input_string):
+        inputs = input_string.split(',')
+        return Input(inputs[0], inputs[1], inputs[2])
+
     def as_string(self):
         return self.__str__()
 
@@ -121,7 +126,6 @@ class Input:
 
 
 class Output:
-
     def __init__(self, to_public_key, value, signature, tx_fee = False):
         self.to_public_key = to_public_key
         self.value = value
@@ -133,6 +137,14 @@ class Output:
             return str(True) + "," + str(self.value)+","
         else:
             return str(self.to_public_key) + "," + str(self.value) + "," + str(self.signature)+","
+
+    @classmethod
+    def load_from_string(cls, output_string):
+        outputs = output_string.split(',')
+        if outputs[0] == "True":
+            return Output("", outputs[1], "", True)
+        else:
+            return Output(outputs[0], outputs[1], outputs[2])
 
     def as_string(self):
         return self.__str__()
