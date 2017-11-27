@@ -3,11 +3,17 @@ import codecs
 from Block import Block
 import math
 from Transaction import Transaction, Input, Output
-import ecdsa
+import ecdsa, time
 from ecdsa import SigningKey, VerifyingKey
+from InputOutput import LoadBlockchain
 
 
 class Node(object):
+    block_height_counter = 0
+    block_difficulty = 0 #amount of leading zeroes
+    time_threshold_seconds = 60 #Arbitrary number. Arguments can be made for higher or lower value
+    expected_time_between_blocks = 10 * 60
+    blocks_between_difficulty_check = 2016
 
     def __init__(self, mining_address, private_key):
         self.blockchain = []
@@ -28,12 +34,14 @@ class Node(object):
         #Generate genesis_hash, used temporarily as the base
         genesis_hash = self.guess_hash(self.merkle_root, 0, self.merkle_root)
         print("GenesisHas: ", genesis_hash[0])
-        genesis_block = Block(genesis_hash[1], genesis_hash[0], genesis_hash[1], self.transactions)
+        genesis_block = Block(genesis_hash[1], genesis_hash[0], genesis_hash[1], self.transactions, self.block_height_counter)
+        self.block_height_counter += 1;
         self.blockchain.append(genesis_block)
         while True:
             prev_block = self.blockchain[-1]
             correct_block = self.guess_hash(prev_block.block_header_hash, 18, self.merkle_root)
             if correct_block:
+
                 self.current_nonce = 0
                 self.add_block(correct_block)
 
@@ -76,20 +84,28 @@ class Node(object):
 
     def add_block(self, correctBlock):
         prev_block = self.blockchain[-1]
-        block = Block(correctBlock[1], correctBlock[0], prev_block.block_header_hash, self.transactions, self.merkle_root)
+        block = Block(correctBlock[1], correctBlock[0], prev_block.block_header_hash, self.transactions, block_height=self.block_height_counter, time=correctBlock[2])
+        self.block_height_counter += 1;
         if self.confirm_block(block):
             for transaction in block.transactions:
                 self.update_ledgers(transaction)
             self.blockchain.append(block)
 
+            #Adjust difficulty
+            if block.block_height % self.blocks_between_difficulty_check == 0:
+                self.adjustDifficulty(block)
+
+
     def guess_hash(self, previous_block_header_hash, nBits, merkle_root):
         hash_guess = hashlib.sha3_256()
         nonce = self.random_nonce()
+        epoch_time = time.time()
         hash_guess.update(previous_block_header_hash)
         hash_guess.update(merkle_root)
         hash_guess.update(nonce)
+        hash_guess.update(epoch_time)
         if self.hash_valid(hash_guess.digest(), nBits):
-            return [hash_guess.digest(), nonce]
+            return [hash_guess.digest(), nonce, epoch_time]
         else:
             return False
 
@@ -163,6 +179,42 @@ class Node(object):
         if hash[byte_idx] < 2 ** (8 - (nBits % 8)) - 1:
             return True
         return False
+
+    """
+    difficulty adjustment methods
+    """
+
+    def adjustDifficulty(self, c_block):
+        average_time = self.getAverageBlockTime(self.getBlockTimesList(c_block))
+        if average_time > self.expected_time_between_blocks+self.time_threshold_seconds:
+            self.block_difficulty -= 1 #Make it easier
+        elif average_time < self.expected_time_between_blocks-self.time_threshold_seconds:
+            self.block_difficulty += 1 #make it harder
+        return self.block_difficulty
+
+
+    def getBlockTimesList(self, c_block):
+        io = LoadBlockchain()
+        height = c_block.block_height
+        times = []
+        for block_number in range(height - self.blocks_between_difficulty_check, height):
+            block = io.get_block(block_number)
+            times.append(block.time)
+
+        return times
+
+    @classmethod
+    def getAverageBlockTime(self, times):
+        time_sum = 0
+        for index in range(len(times)-1):
+            time1 = times[index]
+            time2 = times[index+1]
+
+            time_sum += (time2-time1)
+
+        average_time = int(round(time_sum/self.blocks_between_difficulty_check))
+        return average_time
+
 
 if __name__ == "__main__":
     sk = SigningKey.generate(curve=ecdsa.SECP256k1)

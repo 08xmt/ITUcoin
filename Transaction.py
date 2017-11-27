@@ -1,4 +1,5 @@
 import hashlib
+import json
 
 class Transaction:
 
@@ -12,6 +13,18 @@ class Transaction:
         self.message = message
         self.amount = amount
         self.coinbase = coinbase
+
+    @classmethod
+    def create_from_string(cls, transaction_as_string):
+        dict = json.loads(transaction_as_string)
+        return Transaction(signature=dict['signature'],
+                           input_list=dict['inputs'],
+                           output_list=dict['outputs'],
+                           message=dict['message'],
+                           amount=dict['amount'],
+                           locktime=dict['locktime'],
+                           coinbase=dict['coinbase'])
+
 
     def __str__(self):
         return str(self.locktime) + str(self.message) + str(self.signature)
@@ -37,9 +50,10 @@ class Transaction:
         for output in self.outputs:
             tx_outputs.append(output.as_list())
 
-        transaction_dict = {"locktime", self.locktime, "inputs", tx_inputs, "outputs", tx_outputs, "signature",
-                            self.signature, "message", self.message, "amount", self.amount, "coinbase", self.coinbase}
+        transaction_dict = {"locktime": self.locktime, "inputs": tx_inputs, "outputs": tx_outputs, "signature":
+                            self.signature, "message": self.message, "amount": self.amount, "coinbase": self.coinbase}
         return {self.get_hash(), transaction_dict}
+
 
     def size(self):
         #return len(bytes(str(self)))
@@ -48,6 +62,32 @@ class Transaction:
     def price_per_byte(self):
         #return self.size()/self.fee
         raise NotImplementedError()
+
+    def tx_to_string(self):
+
+        tx_inputs = "["
+        for input in self.inputs:
+            tx_inputs += input.as_string()
+
+        tx_inputs += "]"
+
+        tx_outputs = "["
+        for output in self.outputs:
+            tx_outputs += output.as_string()
+        tx_outputs += "]"
+
+        transaction_dict = {"locktime": self.locktime,
+                            "inputs": tx_inputs,
+                            "outputs": tx_outputs,
+                            "signature": self.signature,
+                            "message": self.message,
+                            "amount": self.amount,
+                            "coinbase": self.coinbase}
+
+        hash_string = self.get_hash()
+
+        tx_dict = {hash_string.hex(): transaction_dict}
+        return json.dumps(tx_dict)
 
 
 class Input:
@@ -58,7 +98,10 @@ class Input:
         self.signature = signature
 
     def __str__(self):
-        return str(self.previous_tx_hash) + str(self.from_public_key) + str(self.signature)
+        return str(self.previous_tx_hash) + "," + str(self.from_public_key) + "," + str(self.signature)
+
+    def as_string(self):
+        return self.__str__()
 
     def as_list(self):
         return [str(self.previous_tx_hash), str(self.from_public_key), str(self.signature)]
@@ -83,10 +126,12 @@ class Output:
 
     def __str__(self):
         if self.tx_fee:
-            return str(True) + str(self.value)
+            return str(True) + "," + str(self.value)+","
         else:
-            return str(self.to_public_key) + str(self.value) + str(self.signature)
+            return str(self.to_public_key) + "," + str(self.value) + "," + str(self.signature)+","
 
+    def as_string(self):
+        return self.__str__()
 
     def as_list(self):
         if self.tx_fee:
