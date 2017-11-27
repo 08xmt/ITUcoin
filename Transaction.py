@@ -41,6 +41,14 @@ class Transaction:
                             self.signature, "message", self.message, "amount", self.amount, "coinbase", self.coinbase}
         return {self.get_hash(), transaction_dict}
 
+    def size(self):
+        #return len(bytes(str(self)))
+        raise NotImplementedError()
+
+    def price_per_byte(self):
+        #return self.size()/self.fee
+        raise NotImplementedError()
+
 
 class Input:
 
