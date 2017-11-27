@@ -11,6 +11,8 @@ from MerkleTree import MerkleTree
 class Node(object):
 
     def __init__(self, mining_address, private_key):
+        print(private_key)
+        print(mining_address)
         self.blockchain = []
         self.current_nonce = 0
         self.blockreward = 50 * 10 ** 8
@@ -35,7 +37,7 @@ class Node(object):
         self.blockchain.append(genesis_block)
         while True:
             prev_block = self.blockchain[-1]
-            correct_block = self.guess_hash(prev_block.block_header_hash, 15, self.merkle_root)
+            correct_block = self.guess_hash(prev_block.block_header_hash, 19, self.merkle_root)
             if correct_block:
                 self.current_nonce = 0
                 self.add_block(correct_block)
@@ -46,7 +48,7 @@ class Node(object):
                     print("Amount: ", tx.amount, "Message: ", tx.message)  
                 self.transactions = []
                 self.add_transaction(mining_reward)
-                print("Previous blockheader: ", prev_block.block_header_hash)
+                print(self.balance_ledger)
 
     def confirm_block(self, block):
         # First transaction needs to be a coinbase transaction
@@ -54,6 +56,7 @@ class Node(object):
             return False
         # Check if rest of blocks are valid
         for transaction in block.transactions[0:]:
+            #TODO: Implement this logic
             pass
         return True
 

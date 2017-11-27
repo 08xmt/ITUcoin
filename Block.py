@@ -14,4 +14,7 @@ class Block:
         merkle_tree.create_tree
         self.merkle_tree = merkle_tree
 
+    def __str__(self):
+        return str(self.time) + "," + str(self.nonce) + "," + self.previous_block_header_hash + "," + self.block_header_hash
+
 
