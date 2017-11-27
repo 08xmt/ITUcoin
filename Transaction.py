@@ -1,8 +1,9 @@
 import hashlib
+import json
 
 class Transaction:
 
-    def __init__(self, signature, input_list, output_list, message, amount, locktime = 0, coinbase = False):
+    def __init__(self, signature, input_list, output_list, message, amount, locktime = 0, coinbase = False, fee_pr_byte=0):
         self.input_counter = len(input_list)
         self.output_counter = len(output_list)
         self.inputs = input_list
@@ -12,9 +13,24 @@ class Transaction:
         self.message = message
         self.amount = amount
         self.coinbase = coinbase
+        self.fee_pr_byte = fee_pr_byte
+
+    @classmethod
+    def create_from_string(cls, transaction_as_string):
+        dict = json.loads(transaction_as_string)
+        dict = next(iter(dict.values()))
+        return Transaction(signature=dict['signature'],
+                           input_list=dict['inputs'],
+                           output_list=dict['outputs'],
+                           message=dict['message'],
+                           amount=dict['amount'],
+                           locktime=dict['locktime'],
+                           coinbase=dict['coinbase'],
+                           fee_pr_byte=dict['fee_pr_byte'])
+
 
     def __str__(self):
-        return str(self.locktime) + str(self.message) + str(self.signature)
+        return self.tx_to_string()
 
     def get_hash(self):
         string_inputs = ""
@@ -24,7 +40,7 @@ class Transaction:
             string_inputs += str(_input)
         for output in self.outputs:
             string_outputs += str(output)
-        hasher.update((str(self) + string_inputs + string_outputs).encode('utf-8'))
+        hasher.update((str(self.locktime) + str(self.message) + str(self.signature) + string_inputs + string_outputs).encode('utf-8'))
         return hasher.hexdigest()
 
     def get_as_dict(self):
@@ -37,9 +53,45 @@ class Transaction:
         for output in self.outputs:
             tx_outputs.append(output.as_list())
 
-        transaction_dict = {"locktime", self.locktime, "inputs", tx_inputs, "outputs", tx_outputs, "signature",
-                            self.signature, "message", self.message, "amount", self.amount, "coinbase", self.coinbase}
+        transaction_dict = {"locktime": self.locktime, "inputs": tx_inputs, "outputs": tx_outputs, "signature":
+                            self.signature, "message": self.message, "amount": self.amount, "coinbase": self.coinbase, "fee_pr_byte": self.fee_pr_byte}
         return {self.get_hash(), transaction_dict}
+
+
+    def size(self):
+        return len(self.tx_to_string.encode('utf-8'))
+
+    def total_fee(self):
+        return self.size()*self.fee_pr_byte
+
+    def tx_to_string(self):
+
+        tx_inputs = "["
+        for input in self.inputs:
+            tx_inputs += input.as_string()
+
+        tx_inputs += "]"
+
+        tx_outputs = "["
+        for output in self.outputs:
+            tx_outputs += output.as_string()
+        tx_outputs += "]"
+
+        transaction_dict = {"locktime": self.locktime,
+                            "inputs": tx_inputs,
+                            "outputs": tx_outputs,
+                            "signature": self.signature,
+                            "message": self.message,
+                            "amount": self.amount,
+                            "coinbase": self.coinbase,
+                            "fee_pr_byte": self.fee_pr_byte}
+
+        hash_string = self.get_hash()
+        print(hash_string)
+
+        tx_dict = {hash_string: transaction_dict}
+        print(tx_dict)
+        return json.dumps(tx_dict)
 
 
 class Input:
@@ -50,7 +102,10 @@ class Input:
         self.signature = signature
 
     def __str__(self):
-        return str(self.previous_tx_hash) + str(self.from_public_key) + str(self.signature)
+        return str(self.previous_tx_hash) + "," + str(self.from_public_key) + "," + str(self.signature)
+
+    def as_string(self):
+        return self.__str__()
 
     def as_list(self):
         return [str(self.previous_tx_hash), str(self.from_public_key), str(self.signature)]
@@ -75,9 +130,12 @@ class Output:
 
     def __str__(self):
         if self.tx_fee:
-            return str(True) + str(self.value)
+            return str(True) + "," + str(self.value)+","
         else:
-            return str(self.to_public_key) + str(self.value) + str(self.signature)
+            return str(self.to_public_key) + "," + str(self.value) + "," + str(self.signature)+","
+
+    def as_string(self):
+        return self.__str__()
 
     def as_list(self):
         if self.tx_fee:
