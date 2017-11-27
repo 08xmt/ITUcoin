@@ -1,6 +1,7 @@
 from Server import server
 import re
 from Block import Block as block
+from Transaction import Transaction
 
 class messaging:
     
@@ -123,9 +124,9 @@ class messaging:
         self.remove(dead_nodes)
 
     def receive_tx(self,address):
-        message, sender = self.server.received()
+        message, sender = self.server.receive()
         if message:
-            tx = transaction.create_from_string(message)
+            tx = Transaction.create_from_string(message)
             print(str(tx))
             server.send(address, b'ok')
         else:
