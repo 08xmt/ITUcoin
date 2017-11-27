@@ -3,7 +3,7 @@ import json
 
 class Transaction:
 
-    def __init__(self, signature, input_list, output_list, message, amount, locktime = 0, coinbase = False):
+    def __init__(self, signature, input_list, output_list, message, amount, locktime = 0, coinbase = False, fee_pr_byte=0):
         self.input_counter = len(input_list)
         self.output_counter = len(output_list)
         self.inputs = input_list
@@ -13,6 +13,7 @@ class Transaction:
         self.message = message
         self.amount = amount
         self.coinbase = coinbase
+        self.fee_pr_byte = fee_pr_byte
 
     @classmethod
     def create_from_string(cls, transaction_as_string):
@@ -23,7 +24,8 @@ class Transaction:
                            message=dict['message'],
                            amount=dict['amount'],
                            locktime=dict['locktime'],
-                           coinbase=dict['coinbase'])
+                           coinbase=dict['coinbase'],
+                           fee_pr_byte=dict['fee_pr_byte'])
 
 
     def __str__(self):
@@ -51,17 +53,15 @@ class Transaction:
             tx_outputs.append(output.as_list())
 
         transaction_dict = {"locktime": self.locktime, "inputs": tx_inputs, "outputs": tx_outputs, "signature":
-                            self.signature, "message": self.message, "amount": self.amount, "coinbase": self.coinbase}
+                            self.signature, "message": self.message, "amount": self.amount, "coinbase": self.coinbase, "fee_pr_byte": self.fee_pr_byte}
         return {self.get_hash(), transaction_dict}
 
 
     def size(self):
-        #return len(bytes(str(self)))
-        raise NotImplementedError()
+        return len(self.tx_to_string.encode('utf-8'))
 
-    def price_per_byte(self):
-        #return self.size()/self.fee
-        raise NotImplementedError()
+    def total_fee(self):
+        return self.size()*self.fee_pr_byte
 
     def tx_to_string(self):
 
@@ -82,7 +82,8 @@ class Transaction:
                             "signature": self.signature,
                             "message": self.message,
                             "amount": self.amount,
-                            "coinbase": self.coinbase}
+                            "coinbase": self.coinbase,
+                            "fee_pr_byte": self.fee_pr_byte}
 
         hash_string = self.get_hash()
 
