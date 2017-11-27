@@ -42,7 +42,7 @@ class LoadBlockchain:
     def _write_blocks_to_file(self, block_list, file_name):
         file = open(file_name, "a")
         for block in block_list:
-            writeable_block_dict = json.dumps({block.block_height: block.to_json()})
+            writeable_block_dict = json.dumps({block.block_height: block.to_dict()})
             print(writeable_block_dict)
             file.write(str(writeable_block_dict)+"\n")
         file.close()
