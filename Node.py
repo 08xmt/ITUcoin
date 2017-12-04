@@ -7,6 +7,8 @@ import ecdsa, time
 from ecdsa import SigningKey, VerifyingKey
 from MerkleTree import MerkleTree
 from InputOutput import LoadBlockchain
+from mempool import mempool
+from messaging import messaging
 
 
 class Node(object):
@@ -16,56 +18,42 @@ class Node(object):
     expected_time_between_blocks = 10 * 60
     blocks_between_difficulty_check = 2016
 
-    def __init__(self, mining_address, private_key):
-        print(private_key)
-        print(mining_address)
+    def __init__(self, mining_address, private_key,listening_port=10000):
         self.blockchain = []
-        self.current_nonce = 0
         self.blockreward = 50 * 10 ** 8
         self.balance_ledger = {} #address => balance
         self.input_ledger = {} # address => input_dict{input_hash => value}
         self.mining_address = mining_address
         self.mining_sk = SigningKey.from_string(bytes.fromhex(private_key), curve=ecdsa.SECP256k1)
         self.transaction_hasher = hashlib.sha3_256()
-        self.transaction_hash = ""
-        first_output = Output(mining_address, self.blockreward, self.mining_sk.sign((str(self.mining_address) + str(self.blockreward)).encode('utf-8')))
-        first_transaction = Transaction(self.mining_sk.sign(b"coinbase"),[],[first_output],"coinbase",self.blockreward,coinbase=True)
-        self.transactions = [first_transaction]
-        self.merkle_tree = MerkleTree(list_of_transactions=self.transactions)
-        self.merkle_tree.create_tree()
-        self.merkle_root = self.merkle_tree.get_root()
+        self.mempool = mempool()
+        self.messaging = messaging(10000,[])
 
     def main(self):
-        #Generate genesis_hash, used temporarily as the base
-        genesis_hash = self.guess_hash(self.merkle_root, 0, self.merkle_root)
-        print("GenesisHas: ", genesis_hash[0])
-        genesis_block = Block(genesis_hash[1], genesis_hash[0], genesis_hash[1], self.transactions, self.block_height_counter)
-        self.block_height_counter += 1;
-        self.blockchain.append(genesis_block)
         while True:
-            prev_block = self.blockchain[-1]
-            correct_block = self.guess_hash(prev_block.block_header_hash, 19, self.merkle_root)
-            if correct_block:
+            message, payload, sender = self.messaging.listen()
+            if message == 'new block':
+                if valid_block(payload):
+                    if self.mining_process.is_alive():
+                        self.mining_process.terminate()
+                    self.add_block(payload)
+                    self.mempool.remove_items(payload.transaction_list())
+            elif message == 'new tx':
+                if transaction_valid(payload):
+                    self.add_transaction()
+            elif message[0:5] == 'get b':
+                self.messaging.send_block(sender, get_max_block)
+            elif message == 'get m':
+                self.messaging.send_mempool(sender, self.mempool)
 
-                self.current_nonce = 0
-                self.add_block(correct_block)
-
-                mining_reward_output = Output(self.mining_address, self.blockreward, self.mining_sk.sign((str(self.mining_address) + str(self.blockreward)).encode('utf-8')))
-                mining_reward = Transaction(self.mining_sk.sign(b"coinbase"),[],[mining_reward_output],"coinbase",self.blockreward,coinbase=True)
-                for tx in self.transactions:
-                    print("Amount: ", tx.amount, "Message: ", tx.message)  
-                self.transactions = []
-                self.add_transaction(mining_reward)
-                print(self.balance_ledger)
-
-    def confirm_block(self, block):
+    def valid_block(self, block):
         # First transaction needs to be a coinbase transaction
         if not block.transactions[0].coinbase:
             return False
         # Check if rest of blocks are valid
         for transaction in block.transactions[0:]:
-            #TODO: Implement this logic
-            pass
+            if not transaction_valid(transaction):
+                return False
         return True
 
     def update_ledgers(self, transaction):
@@ -85,18 +73,11 @@ class Node(object):
             self.input_ledger[_output.to_public_key][new_input.get_hash()] = _output.value
 
     def add_transaction(self, transaction):
-        self.transactions.append(transaction)
-        self.transaction_hasher.update(transaction.get_hash().encode('utf-8'))
-        self.transaction_hash = self.transaction_hasher.hexdigest()
-        self.merkle_tree = MerkleTree(list_of_transactions=self.transactions)
-        self.merkle_tree.create_tree()
-        self.merkle_root = self.merkle_tree.get_root()
+        self.mempool.push_tx(transaction)
 
-    def add_block(self, correctBlock):
-        prev_block = self.blockchain[-1]
-        block = Block(correctBlock[1], correctBlock[0], prev_block.block_header_hash, self.transactions, block_height=self.block_height_counter, time=correctBlock[2])
+    def add_block(self, block):
         self.block_height_counter += 1;
-        if self.confirm_block(block):
+        if self.valid_block(block):
             for transaction in block.transactions:
                 self.update_ledgers(transaction)
             self.blockchain.append(block)
@@ -104,24 +85,6 @@ class Node(object):
             #Adjust difficulty
             if block.block_height % self.blocks_between_difficulty_check == 0:
                 self.adjustDifficulty(block)
-
-
-    def guess_hash(self, previous_block_header_hash, nBits, merkle_root):
-        hash_guess = hashlib.sha3_256()
-        nonce = self.random_nonce()
-        epoch_time = time.time()
-        hash_guess.update(previous_block_header_hash)
-        hash_guess.update(merkle_root)
-        hash_guess.update(nonce)
-        hash_guess.update(epoch_time)
-        if self.hash_valid(hash_guess.digest(), nBits):
-            return [hash_guess.digest(), nonce, epoch_time]
-        else:
-            return False
-
-    def random_nonce(self):
-        self.current_nonce = self.current_nonce+1
-        return str(self.current_nonce).encode()
 
     def transaction_valid(self, transaction, from_public_key):
         return transaction_history_valid(transaction.input_list, transaction.output_list, transaction.amount, from_public_key) and sig_valid(signature,message,from_public_key)
@@ -152,7 +115,6 @@ class Node(object):
     def sig_valid(self, signature, message, public_key):
         vk = VerifyingKey.from_string(bytes.fromhex(public_key), curve=ecdsa.SECP256k1)
         return vk.verify(bytes.fromhex(sig), message)
-
 
     def generate_transaction(self, private_key, from_public_key, to_public_key, amount, tx_fee, message = b"ITUCOIN"):
         sk = SigningKey.from_string(private_key, curve=ecdsa.SECP256k1)

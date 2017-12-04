@@ -13,8 +13,7 @@ class messaging:
 
     def listen(self):
         print("Listening . . .")
-        data, sender = self.server.receive()
-        message = data
+        message, sender = self.server.receive()
         print("Received " + message)
         if message == 'ping':
             self.server.send(sender, b'ping')
@@ -22,45 +21,46 @@ class messaging:
         elif message == 'new block':
             self.server.send(sender, b'ok')
             block = self.receive_block(sender)
-            #TODO: Add block to state
+            return (message, block, sender)
 
         elif message == 'new tx':
             self.server.send(sender, b'ok')
             tx = self.receive_tx(sender)
-            #TODO: Add tx to mempool
+            return (message, tx, sender)
 
         elif message == 'new node':
             self.server.send(sender, b'ok')
-            print(self.known_nodes)
             success = self.receive_nodes(sender)
-            print(success)
+            #No need to return to Node control, as this can be handled by the messaging obj.
 
         elif message[0:5] == 'get b':
             block_id = message[5:]
-            #TODO: Get block from block_id
-            self.send_block(sender, block)
+            return(message,"",sender)
 
         elif message == 'get m':
-            #TODO: Get and implement mempool
-            self.send_mempool(sender)
+            return(message,"",sender)
 
         elif message == 'get n':
             self.send_nodes(sender)
+            #No need to return to Node control, as this can be handled by the messaging obj.
 
         else:
-            print(message)
-        print("Listening again . . .")
+            print("Could not parse message: " + message)
         self.listen()
 
     def propagate_block(self, block):
         dead_nodes = []
         for address in self.known_nodes:
-            server.send(address, b'new block')
+            self.server.send(address, b'new block')
             if server.receive(adress, b'ok'):
                 self.send_block(block)
             else:
                 dead_nodes.append(address)
         self.remove(dead_nodes)
+        if dead_nodes:
+            return False
+        else:
+            return True
 
     def propagate_tx(self, transaction):
         dead_nodes = []
@@ -145,7 +145,6 @@ class messaging:
             return block.create_from_string(header, txs)
 
     def receive_nodes(self, address):
-        #TODO: Add filter to remove all non-ip addresses
         receiving = True
         while receiving:
             message, sender = self.server.receive()
@@ -187,7 +186,11 @@ class messaging:
             return True
             
     def send_mempool(self, address, mempool):
-        pass
+        for pair in mempool.heap:
+            tx = pair[1]
+            if not self.send_transaction(address, tx):
+                return False
+        return True
 
     def send_transaction(self, address, transaction):
         server.send(address, transaction.to_json_string().encode())

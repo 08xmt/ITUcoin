@@ -12,7 +12,7 @@ class Block:
         self.block_height = block_height
         merkle_tree = MerkleTree()
         merkle_tree.list_of_transactions = self.transactions
-        merkle_tree.create_tree
+        merkle_tree.create_tree()
         self.merkle_tree = merkle_tree
 
     #def __str__(self):

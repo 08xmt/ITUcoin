@@ -1,6 +1,7 @@
 from Server import server
 from Transaction import *
 from Block import *
+from mempool import mempool
 import time
 
 def ping(s, a):
@@ -67,6 +68,8 @@ if __name__ == '__main__':
                     amount=1000)
 
     block = Block(213,"headerHas", "otherheaderhash", [tx1, tx2, tx3], 19, 132456789)
+
+    tx_mems = mempool(txs=block.transactions)
    
     #print(ping(s, a))
 
@@ -76,5 +79,5 @@ if __name__ == '__main__':
 
     #new_tx(s, a, tx1)
 
-    new_block(s, a, block)
+    #new_block(s, a, block)
 
