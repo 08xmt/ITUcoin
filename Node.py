@@ -86,6 +86,27 @@ class Node(object):
             if block.block_height % self.blocks_between_difficulty_check == 0:
                 self.adjustDifficulty(block)
 
+<<<<<<< HEAD
+=======
+
+    def guess_hash(self, previous_block_header_hash, nBits, merkle_root):
+        hash_guess = hashlib.sha3_256()
+        nonce = self.random_nonce()
+        epoch_time = time.time()
+        hash_guess.update(previous_block_header_hash)
+        hash_guess.update(merkle_root)
+        hash_guess.update(nonce)
+        hash_guess.update(str(epoch_time).encode('utf-8'))
+        if self.hash_valid(hash_guess.digest(), nBits):
+            return [hash_guess.digest(), nonce, epoch_time]
+        else:
+            return False
+
+    def random_nonce(self):
+        self.current_nonce = self.current_nonce+1
+        return str(self.current_nonce).encode()
+
+>>>>>>> 89d5af54f0d4f1215c3deed45b3c7b8fffade9e9
     def transaction_valid(self, transaction, from_public_key):
         return transaction_history_valid(transaction.input_list, transaction.output_list, transaction.amount, from_public_key) and sig_valid(signature,message,from_public_key)
 
@@ -148,6 +169,8 @@ class Node(object):
         self.add_transaction(tx)
 
     def hash_valid(self, hash, nBits):
+        if not self.validate_hash_difficulty(hash):
+            return False
         byte_idx = math.floor(nBits/8)
         for byte in hash[:byte_idx]:
             if byte > 0:
@@ -156,9 +179,21 @@ class Node(object):
             return True
         return False
 
+
     """
     difficulty adjustment methods
     """
+    def validate_hash_difficulty(self, hash):
+        if self.block_difficulty == 0:
+            return True
+
+        correct_leading_zeroes = ""
+        for i in range(0, self.block_difficulty):
+            correct_leading_zeroes += "0"
+
+        hash_difficulty_characters = hash[0:self.block_difficulty]
+        return correct_leading_zeroes == hash_difficulty_characters
+
 
     def adjustDifficulty(self, c_block):
         average_time = self.getAverageBlockTime(self.getBlockTimesList(c_block))

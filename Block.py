@@ -35,7 +35,8 @@ class Block:
                 "block_header_hash": self.block_header_hash,
                 "previous_block_header_hash": self.previous_block_header_hash,
                 "transactions": self.transaction_list(),
-                "block_height": self.block_height}
+                "block_height": self.block_height,
+                "time": self.time}
 
         return dict
 
