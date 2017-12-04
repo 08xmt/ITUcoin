@@ -33,8 +33,8 @@ class Node(object):
     def main(self):
         #Generate genesis_hash, used temporarily as the base
         genesis_hash = self.guess_hash(self.merkle_root, 0, self.merkle_root)
-        print("GenesisHas: ", genesis_hash[0])
-        genesis_block = Block(genesis_hash[1], genesis_hash[0], genesis_hash[1], self.transactions, self.block_height_counter)
+        print("GenesisHash: ", str(genesis_hash[0]))
+        genesis_block = Block(genesis_hash[1], genesis_hash[0], genesis_hash[1], self.transactions, self.block_height_counter, time.time())
         self.block_height_counter += 1;
         self.blockchain.append(genesis_block)
         while True:
@@ -103,7 +103,7 @@ class Node(object):
         hash_guess.update(previous_block_header_hash)
         hash_guess.update(merkle_root)
         hash_guess.update(nonce)
-        hash_guess.update(epoch_time)
+        hash_guess.update(str(epoch_time).encode('utf-8'))
         if self.hash_valid(hash_guess.digest(), nBits):
             return [hash_guess.digest(), nonce, epoch_time]
         else:
@@ -172,6 +172,8 @@ class Node(object):
         return Transaction(signature, input_list, output_list, message)
 
     def hash_valid(self, hash, nBits):
+        #if not self.validate_hash_difficulty(hash):
+            #return False
         byte_idx = math.floor(nBits/8)
         for byte in hash[:byte_idx]:
             if byte > 0:
@@ -180,9 +182,14 @@ class Node(object):
             return True
         return False
 
+
     """
     difficulty adjustment methods
     """
+
+    def validate_hash_difficulty(self, hash):
+        correct_leading_zeroes = ""
+
 
     def adjustDifficulty(self, c_block):
         average_time = self.getAverageBlockTime(self.getBlockTimesList(c_block))
