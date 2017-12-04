@@ -172,8 +172,8 @@ class Node(object):
         return Transaction(signature, input_list, output_list, message)
 
     def hash_valid(self, hash, nBits):
-        #if not self.validate_hash_difficulty(hash):
-            #return False
+        if not self.validate_hash_difficulty(hash):
+            return False
         byte_idx = math.floor(nBits/8)
         for byte in hash[:byte_idx]:
             if byte > 0:
@@ -186,9 +186,16 @@ class Node(object):
     """
     difficulty adjustment methods
     """
-
     def validate_hash_difficulty(self, hash):
+        if self.block_difficulty == 0:
+            return True
+
         correct_leading_zeroes = ""
+        for i in range(0, self.block_difficulty):
+            correct_leading_zeroes += "0"
+
+        hash_difficulty_characters = hash[0:self.block_difficulty]
+        return correct_leading_zeroes == hash_difficulty_characters
 
 
     def adjustDifficulty(self, c_block):
