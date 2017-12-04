@@ -1,5 +1,6 @@
 from Block import Block
 import os
+import glob
 import linecache
 import json
 from collections import defaultdict
@@ -14,7 +15,7 @@ class LoadBlockchain:
 
     #public methods
     def insert_blocks(self, blocks):
-        file_names = self.get_file_names(blocks)
+        file_names = self._get_file_names(blocks)
 
         for file, blocks_list in file_names.items():
             final_URI = self.folder_name + str(file)
@@ -25,12 +26,41 @@ class LoadBlockchain:
     def get_block(self, block_number):
         block_string = linecache.getline(self.folder_name + self._get_filename(block_number),
                                              self._get_block_line(block_number)).strip()
+
+        return self.json_block_to_block_object(block_string)
+
+    #baj = block as jsonn
+    def json_block_to_block_object(self, block_string):
         b_json = json.loads(block_string)
-        baj = b_json[str(block_number)]
+        keys = list(b_json.keys())
+        baj = b_json[str(keys[0])]
+        print(baj)
         block = Block(nonce=baj['nonce'], block_header_hash=baj['block_header_hash'],
-                        previous_block_header_hash=baj['previous_block_header_hash'],
-                        transactions=baj['transactions'], block_height=baj['block_height'])
+                      previous_block_header_hash=baj['previous_block_header_hash'],
+                      transactions=baj['transactions'], block_height=baj['block_height'], time=baj['time'])
         return block
+
+    def get_newest_block(self):
+        json_strings = self.folder_name + "blocks*to*.json"
+        string_list = glob.glob(json_strings)
+        newest_json_file = string_list[0]
+
+        for jstring in string_list:
+            block_height_to = self._get_block_to_value(jstring)
+            if block_height_to > self._get_block_to_value(newest_json_file):
+                newest_json_file = jstring
+
+        with open(newest_json_file) as file:
+            block_json = file.readlines()[-1]
+        block = self.json_block_to_block_object(block_json)
+        print(block)
+        return block
+
+    def _get_block_to_value(self, block_location):
+        polished_string = block_location.replace(self.folder_name + "blocks", "")
+        polished_string = polished_string.replace(".json", "")
+        string_l = polished_string.split("to")
+        return int(string_l[1])
 
     #Private methods
     def _get_filename(self, block_number):
@@ -62,3 +92,10 @@ class LoadBlockchain:
             block_line = block_number
 
         return block_line
+
+
+if __name__ == '__main__':
+    block = Block(1, "heeej", "heeejsa", [], 1500, 123456)
+    blockchaon = LoadBlockchain()
+    blockchaon.insert_blocks([block])
+    blockchaon.get_newest_block()
