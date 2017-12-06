@@ -3,7 +3,7 @@ import json
 
 class Transaction:
 
-    def __init__(self, signature, input_list, output_list, message, amount, locktime = 0, coinbase = False, fee_pr_byte=0):
+    def __init__(self, signature, input_list, output_list, message, amount, address, locktime = 0, coinbase = False, fee_pr_byte=0):
         self.input_counter = len(input_list)
         self.output_counter = len(output_list)
         self.inputs = input_list
@@ -14,6 +14,7 @@ class Transaction:
         self.amount = amount
         self.coinbase = coinbase
         self.fee_pr_byte = fee_pr_byte
+        self.address = address
 
     @classmethod
     def create_from_string(cls, transaction_as_string):
@@ -32,6 +33,7 @@ class Transaction:
                            output_list=tx_dict['outputs'],
                            message=tx_dict['message'],
                            amount=tx_dict['amount'],
+                           address=tx_dict['address'],
                            locktime=tx_dict['locktime'],
                            coinbase=tx_dict['coinbase'],
                            fee_pr_byte=tx_dict['fee_pr_byte'])
@@ -62,7 +64,7 @@ class Transaction:
             tx_outputs.append(output.as_list())
 
         transaction_dict = {"locktime": self.locktime, "inputs": tx_inputs, "outputs": tx_outputs, "signature":
-                            self.signature, "message": self.message, "amount": self.amount, "coinbase": self.coinbase, "fee_pr_byte": self.fee_pr_byte}
+                            self.signature, "message": self.message, "amount": self.amount, 'address': self.address, "coinbase": self.coinbase, "fee_pr_byte": self.fee_pr_byte}
         return {self.get_hash(), transaction_dict}
 
 
@@ -88,6 +90,7 @@ class Transaction:
                             "signature": self.signature,
                             "message": self.message,
                             "amount": self.amount,
+                            'address': self.address,
                             "coinbase": self.coinbase,
                             "fee_pr_byte": self.fee_pr_byte}
 
