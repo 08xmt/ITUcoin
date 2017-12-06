@@ -1,6 +1,6 @@
 import hashlib
 import json
-
+import codecs
 class Transaction:
 
     def __init__(self, signature, input_list, output_list, message, amount, locktime = 0, coinbase = False, fee_pr_byte=0):
@@ -9,7 +9,10 @@ class Transaction:
         self.inputs = input_list
         self.outputs = output_list
         self.locktime = locktime
-        self.signature = signature
+        if isinstance(signature, bytes):
+            self.signature = signature.hex()
+        else:
+            self.signature = signature
         self.message = message
         self.amount = amount
         self.coinbase = coinbase
@@ -17,7 +20,11 @@ class Transaction:
 
     @classmethod
     def create_from_string(cls, transaction_as_string):
-        tx_dict = json.loads(transaction_as_string)
+        tx = transaction_as_string
+        print(tx)
+        if isinstance(transaction_as_string, bytes):
+            tx = tx.decode()
+        tx_dict = json.loads(tx)
         tx_dict = next(iter(tx_dict.values()))
         
         #Last input and output will always be whitespace
@@ -92,10 +99,8 @@ class Transaction:
                             "fee_pr_byte": self.fee_pr_byte}
 
         hash_string = self.get_hash()
-        print(hash_string)
 
         tx_dict = {hash_string: transaction_dict}
-        print(tx_dict)
         return json.dumps(tx_dict)
 
 
@@ -135,7 +140,10 @@ class Output:
     def __init__(self, to_public_key, value, signature, tx_fee = False):
         self.to_public_key = to_public_key
         self.value = value
-        self.signature = signature
+        if isinstance(signature, bytes):
+            self.signature = str(signature.hex())
+        else:
+            self.signature = signature
         self.tx_fee = tx_fee
 
     def __str__(self):
@@ -148,9 +156,9 @@ class Output:
     def load_from_string(cls, output_string):
         outputs = output_string.split(',')
         if outputs[0] == "True":
-            return Output("", outputs[1], "", True)
+            return Output("", int(outputs[1]), "", True)
         else:
-            return Output(outputs[0], outputs[1], outputs[2])
+            return Output(outputs[0], int(outputs[1]), outputs[2])
 
     def as_string(self):
         return self.__str__()

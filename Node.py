@@ -6,9 +6,11 @@ from Transaction import Transaction, Input, Output
 import ecdsa, time
 from ecdsa import SigningKey, VerifyingKey
 from MerkleTree import MerkleTree
-from InputOutput import LoadBlockchain
 from mempool import mempool
+from miner import Miner
 from messaging import messaging
+from InputOutput import Input_Output
+import multiprocessing
 
 
 class Node(object):
@@ -18,7 +20,7 @@ class Node(object):
     expected_time_between_blocks = 10 * 60
     blocks_between_difficulty_check = 2016
 
-    def __init__(self, mining_address, private_key,listening_port=10000):
+    def __init__(self, mining_address, private_key,listening_port=10000, genesis=False):
         self.blockchain = []
         self.blockreward = 50 * 10 ** 8
         self.balance_ledger = {} #address => balance
@@ -27,32 +29,75 @@ class Node(object):
         self.mining_sk = SigningKey.from_string(bytes.fromhex(private_key), curve=ecdsa.SECP256k1)
         self.transaction_hasher = hashlib.sha3_256()
         self.mempool = mempool()
-        self.messaging = messaging(10000,[])
+        self.listening_port = listening_port
+        self.messaging = messaging(self.listening_port,[])
+        self.io = Input_Output()
+        self.block_difficulty = 12
+
+        if genesis:
+            self.genesis()
+            self.mine(self.mempool.get_transactions(10))
+        self.get_state()
 
     def main(self):
         while True:
             message, payload, sender = self.messaging.listen()
             if message == 'new block':
-                if valid_block(payload):
+                isValid = self.valid_block(payload)
+                print(isValid)
+                print(payload.block_header_string())
+                if isValid:
                     if self.mining_process.is_alive():
                         self.mining_process.terminate()
                     self.add_block(payload)
                     self.mempool.remove_items(payload.transaction_list())
+                    self.get_state()
+                    self.mine(self.mempool.get_transactions(10))
             elif message == 'new tx':
                 if transaction_valid(payload):
                     self.add_transaction()
             elif message[0:5] == 'get b':
-                self.messaging.send_block(sender, get_max_block)
+                block_id = int(message[6:])
+                block = self.io.get_block(block_id)
+                self.messaging.send_block(sender, block)
             elif message == 'get m':
                 self.messaging.send_mempool(sender, self.mempool)
 
+    def mine(self, transactions):
+        last_block = self.blockchain[-1]
+        self.miner = Miner(self.mining_address, self.mining_sk, transactions, last_block, ("127.0.0.1",self.listening_port),self.block_difficulty)
+        self.mining_process = multiprocessing.Process(target=self.miner.main, args=())
+        self.mining_process.start()
+
+    def get_state(self):
+        newest_block = self.io.get_newest_block()
+        newest_known_block = self.messaging.get_block(2 ** 64-1) #Request high blocknumber to get highest known block
+        if not newest_known_block:
+            newest_known_block = self.blockchain[-1]
+        blocks_behind = newest_known_block.block_height - newest_block.block_height
+        if blocks_behind > 0:
+            for i in range(newest_block.block_height, newest_known_block.block_height):
+                block = self.messaging.get_block(i)
+                if block:
+                    self.add_block(block)
+        transactions = self.messaging.get_mempool()
+        for tx in transactions:
+            if not self.mempool.contains(tx):
+                self.mepool.push_tx(tx)
+    
     def valid_block(self, block):
         # First transaction needs to be a coinbase transaction
+        print("Testing block validity")
+        if block.block_height == 0 and block.block_header_hash == "genesis":
+            return True
         if not block.transactions[0].coinbase:
+            print("First transaction not coinbase")
             return False
         # Check if rest of blocks are valid
-        for transaction in block.transactions[0:]:
-            if not transaction_valid(transaction):
+        print("Testing transaction validity")
+        for transaction in block.transactions[1:]:
+            print(transaction.tx_to_string())
+            if not self.transaction_valid(transaction,self.mining_address):#TODO:Replace with Marks updated transaction
                 return False
         return True
 
@@ -66,7 +111,6 @@ class Node(object):
                 self.balance_ledger[_output.to_public_key] += _output.value
             else:
                 self.balance_ledger[_output.to_public_key] = _output.value
-                print(_output.value, _output.to_public_key)
             new_input = Input(transaction.get_hash(), _output.to_public_key, _output.signature) #TODO: Check if this is the correct signature to use.
             if not _output.to_public_key in self.input_ledger:
                 self.input_ledger[_output.to_public_key] = {}
@@ -76,39 +120,20 @@ class Node(object):
         self.mempool.push_tx(transaction)
 
     def add_block(self, block):
-        self.block_height_counter += 1;
         if self.valid_block(block):
+
             for transaction in block.transactions:
                 self.update_ledgers(transaction)
+            self.io.insert_blocks([block])
             self.blockchain.append(block)
+            self.block_height_counter += 1;
 
             #Adjust difficulty
             if block.block_height % self.blocks_between_difficulty_check == 0:
                 self.adjustDifficulty(block)
 
-<<<<<<< HEAD
-=======
-
-    def guess_hash(self, previous_block_header_hash, nBits, merkle_root):
-        hash_guess = hashlib.sha3_256()
-        nonce = self.random_nonce()
-        epoch_time = time.time()
-        hash_guess.update(previous_block_header_hash)
-        hash_guess.update(merkle_root)
-        hash_guess.update(nonce)
-        hash_guess.update(str(epoch_time).encode('utf-8'))
-        if self.hash_valid(hash_guess.digest(), nBits):
-            return [hash_guess.digest(), nonce, epoch_time]
-        else:
-            return False
-
-    def random_nonce(self):
-        self.current_nonce = self.current_nonce+1
-        return str(self.current_nonce).encode()
-
->>>>>>> 89d5af54f0d4f1215c3deed45b3c7b8fffade9e9
     def transaction_valid(self, transaction, from_public_key):
-        return transaction_history_valid(transaction.input_list, transaction.output_list, transaction.amount, from_public_key) and sig_valid(signature,message,from_public_key)
+        return self.transaction_history_valid(transaction.inputs, transaction.outputs, transaction.amount, from_public_key) and self.sig_valid(signature,message,from_public_key)
 
     def transaction_history_valid(self, input_list, output_list, value, from_public_key):
         balance_in = 0
@@ -169,13 +194,15 @@ class Node(object):
         self.add_transaction(tx)
 
     def hash_valid(self, hash, nBits):
+        print("Hash valid:")
+        print(hash)
         if not self.validate_hash_difficulty(hash):
             return False
         byte_idx = math.floor(nBits/8)
         for byte in hash[:byte_idx]:
             if byte > 0:
                 return False
-        if hash[byte_idx] < 2 ** (8 - (nBits % 8)) - 1:
+        if hash[byte_idx] < 2 ** (8 - (self.block_difficulty % 8)) - 1:
             return True
         return False
 
@@ -203,13 +230,12 @@ class Node(object):
             self.block_difficulty += 1 #make it harder
         return self.block_difficulty
 
-
     def getBlockTimesList(self, c_block):
-        io = LoadBlockchain()
+        #io = LoadBlockchain() TODO: Is this important? Doesn't exist.
         height = c_block.block_height
         times = []
         for block_number in range(height - self.blocks_between_difficulty_check, height):
-            block = io.get_block(block_number)
+            block = self.io.get_block(block_number)
             times.append(block.time)
 
         return times
@@ -225,6 +251,17 @@ class Node(object):
 
         average_time = int(round(time_sum/self.blocks_between_difficulty_check))
         return average_time
+    
+    def genesis(self):
+        first_output = Output(self.mining_address, self.blockreward, self.mining_sk.sign((str(self.mining_address) + str(self.blockreward)).encode('utf-8')))
+        first_transaction = Transaction(self.mining_sk.sign(b"coinbase"),[],[first_output],"coinbase",self.blockreward,coinbase=True)
+        transactions = [first_transaction]
+        tree = MerkleTree(list_of_transactions=transactions)
+        tree.create_tree()
+        root = tree.get_root()
+        genesis_block = Block(0, "genesis", "", transactions, self.block_height_counter, time.time())
+        self.add_block(genesis_block);
+        
 
 
 if __name__ == "__main__":
@@ -232,6 +269,6 @@ if __name__ == "__main__":
     vk = sk.get_verifying_key()
     sk_hex = codecs.encode(sk.to_string(), 'hex').decode("utf-8")
     vk_hex = codecs.encode(vk.to_string(), 'hex').decode("utf-8")
-    node = Node(vk_hex, sk_hex)
+    node = Node(vk_hex, sk_hex, genesis=True)
 
     node.main()
