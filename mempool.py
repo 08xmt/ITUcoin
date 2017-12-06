@@ -30,7 +30,20 @@ class mempool:
             if tx in self.tx_set:
                 self.heap.remove((1./tx.price_of_byte(), tx))
                 self.tx_set.remove(tx)
+        if not isinstance(self.heap, list):
+            self.heap = []
         heapify(self.heap)
+
+    def get_transactions(self, amount):
+        tx_list = []
+        if self.heap:
+            for i in range(0,min(amount,len(self.heap))):
+                tx = self.pop_tx()
+                if tx:
+                    tx_list.append(tx[1])
+            return tx_list
+        else:
+            return []
 
     def threshold_pop_tx(self, threshold, tx):
         if(heap[0][1].size() < threshold):

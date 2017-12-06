@@ -36,6 +36,7 @@ class server:
         finally:
             connection.close()
             self.socket.close()
+            time.sleep(1)
             if not expected_message or expected_message == data.decode():
                 return (data.decode(), client_address)
             else:

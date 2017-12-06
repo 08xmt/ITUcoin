@@ -3,6 +3,7 @@
 import hashlib,json
 import math
 from collections import OrderedDict
+import Transaction
 
 class MerkleTree:
     merkle_tree_transactions = OrderedDict()
@@ -10,7 +11,7 @@ class MerkleTree:
     def __str__(self):
         return self.get_root()
 
-    def __init__(self, list_of_transactions=None):
+    def __init__(self, list_of_transactions=[]):
         self.list_of_transactions = list_of_transactions
         self.past_transactions = OrderedDict()
 
@@ -32,7 +33,7 @@ class MerkleTree:
             if index+1 != len(self.list_of_transactions):
                 node_right = self.list_of_transactions[index+1]
                 node_left_hash = hashlib.sha3_256("".encode('utf-8')).hexdigest()
-                if isinstance(node_left, str):
+                if isinstance(node_right, str):
                     node_right_hash = hashlib.sha3_256(node_right.encode('utf-8')).hexdigest()
                 else:               
                     node_right_hash = node_right.get_hash()
