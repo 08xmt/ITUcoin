@@ -112,7 +112,7 @@ class messaging:
                         receiving = False
                     else:
                         server.send(addres, b'ok')
-                        pending_txs.append(tx) #TODO: Validate transactions before adding them
+                        pending_txs.append(tx)
 
                 self.remove(dead_nodes)
                 return pending_txs

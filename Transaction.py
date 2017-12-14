@@ -3,12 +3,9 @@ import json
 import codecs
 class Transaction:
 
-    def __init__(self, signature, input_list, output_list, message, amount, address, locktime = 0, coinbase = False, fee_pr_byte=0):
-        self.input_counter = len(input_list)
-        self.output_counter = len(output_list)
+    def __init__(self, signature, input_list, output_list, message, amount, address, coinbase = False, tx_fee=0):
         self.inputs = input_list
         self.outputs = output_list
-        self.locktime = locktime
         if isinstance(signature, bytes):
             self.signature = signature.hex()
         else:
@@ -16,14 +13,12 @@ class Transaction:
         self.message = message
         self.amount = amount
         self.coinbase = coinbase
-        self.fee_pr_byte = fee_pr_byte
+        self.tx_fee = tx_fee
         self.address = address
 
     @classmethod
     def create_from_string(cls, transaction_as_string):
-        mining-thread
         tx = transaction_as_string
-        print(tx)
         if isinstance(transaction_as_string, bytes):
             tx = tx.decode()
         tx_dict = json.loads(tx)
@@ -41,9 +36,9 @@ class Transaction:
                            output_list=tx_dict['outputs'],
                            message=tx_dict['message'],
                            amount=tx_dict['amount'],
-                           locktime=tx_dict['locktime'],
+                           address=tx_dict['address'],
                            coinbase=tx_dict['coinbase'],
-                           fee_pr_byte=tx_dict['fee_pr_byte'])
+                           tx_fee=tx_dict['tx_fee'])
 
 
     def __str__(self):
@@ -57,7 +52,7 @@ class Transaction:
             string_inputs += str(_input)
         for output in self.outputs:
             string_outputs += str(output)
-        hasher.update((str(self.locktime) + str(self.message) + str(self.signature) + string_inputs + string_outputs).encode('utf-8'))
+        hasher.update((str(self.message) + str(self.signature) + string_inputs + string_outputs).encode('utf-8'))
         return hasher.hexdigest()
 
     def get_as_dict(self):
@@ -70,7 +65,7 @@ class Transaction:
         for output in self.outputs:
             tx_outputs.append(output.as_list())
 
-        transaction_dict = {"locktime": self.locktime, "inputs": tx_inputs, "outputs": tx_outputs, "signature":
+        transaction_dict = {"inputs": tx_inputs, "outputs": tx_outputs, "signature":
                             self.signature, "message": self.message, "amount": self.amount, 'address': self.address, "coinbase": self.coinbase, "fee_pr_byte": self.fee_pr_byte}
         return {self.get_hash(), transaction_dict}
 
@@ -79,7 +74,10 @@ class Transaction:
         return len(self.tx_to_string.encode('utf-8'))
 
     def total_fee(self):
-        return self.size()*self.fee_pr_byte
+        return tx_fee
+
+    def fee_pr_byte(self):
+        return tx_fee/self.size()
 
     def tx_to_string(self):
         tx_inputs = ""
@@ -91,15 +89,14 @@ class Transaction:
         for output in self.outputs:
             tx_outputs += output.as_string() + "|"
 
-        transaction_dict = {"locktime": self.locktime,
-                            "inputs": tx_inputs,
+        transaction_dict = {"inputs": tx_inputs,
                             "outputs": tx_outputs,
                             "signature": self.signature,
                             "message": self.message,
                             "amount": self.amount,
                             'address': self.address,
                             "coinbase": self.coinbase,
-                            "fee_pr_byte": self.fee_pr_byte}
+                            "tx_fee": self.tx_fee}
 
         hash_string = self.get_hash()
 

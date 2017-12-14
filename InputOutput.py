@@ -56,7 +56,6 @@ class Input_Output:
         with open(newest_json_file) as file:
             block_json = file.readlines()[-1]
         block = self.json_block_to_block_object(block_json)
-        print(block)
         return block
 
     def _get_block_to_value(self, block_location):

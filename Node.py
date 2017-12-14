@@ -14,13 +14,13 @@ import multiprocessing
 
 
 class Node(object):
-    block_height_counter = 0
     block_difficulty = 0 #amount of leading zeroes
     time_threshold_seconds = 60 #Arbitrary number. Arguments can be made for higher or lower value
     expected_time_between_blocks = 10 * 60
     blocks_between_difficulty_check = 2016
 
     def __init__(self, mining_address, private_key,listening_port=10000, genesis=False):
+        self.block_height_counter = 0
         self.blockchain = []
         self.blockreward = 50 * 10 ** 8
         self.balance_ledger = {} #address => balance
@@ -33,11 +33,9 @@ class Node(object):
         self.messaging = messaging(self.listening_port,[])
         self.io = Input_Output()
         self.block_difficulty = 12
-
-        if genesis:
-            self.genesis()
-            self.mine(self.mempool.get_transactions(10))
         self.get_state()
+        if genesis:
+            self.mine(self.mempool.get_transactions(10))
 
     def main(self):
         while True:
@@ -50,7 +48,7 @@ class Node(object):
                     if self.mining_process.is_alive():
                         self.mining_process.terminate()
                     self.add_block(payload)
-                    self.mempool.remove_items(payload.transaction_list())
+                    self.mempool.remove_items(payload._transaction_list())
                     self.get_state()
                     self.mine(self.mempool.get_transactions(10))
             elif message == 'new tx':
@@ -70,10 +68,17 @@ class Node(object):
         self.mining_process.start()
 
     def get_state(self):
-        newest_block = self.io.get_newest_block()
+        try:
+            newest_block = self.io.get_newest_block()
+        except:
+            print("Genesis")
+            self.genesis()
+            newest_block = self.blockchain[0]
         newest_known_block = self.messaging.get_block(2 ** 64-1) #Request high blocknumber to get highest known block
         if not newest_known_block:
-            newest_known_block = self.blockchain[-1]
+            self.blockchain.append(newest_block)
+            newest_known_block = newest_block
+
         blocks_behind = newest_known_block.block_height - newest_block.block_height
         if blocks_behind > 0:
             for i in range(newest_block.block_height, newest_known_block.block_height):
@@ -83,26 +88,29 @@ class Node(object):
         transactions = self.messaging.get_mempool()
         for tx in transactions:
             if not self.mempool.contains(tx):
-                self.mepool.push_tx(tx)
+                self.mempool.push_tx(tx)
     
     def valid_block(self, block):
         print("Testing block validity")
+        print(block.block_height)
         if block.block_height == 0 and block.block_header_hash == "genesis":
             return True
-        if not block.transactions[0].coinbase:
-            print("First transaction not coinbase")
+
+        if not block.transactions[0].coinbase or block.transactions[0].amount != self.blockreward:
+            print("First reward not coinbase or wrong blockreward")
             return False
 
         #Test hash difficulty
         if not self.validate_hash_difficulty(block.block_header_hash):
+            print("Not valid hash difficulty")
             return False
         # Check if rest of blocks are valid
         print("Testing transaction validity")
-        if not block.transactions[0].coinbase or block.transactions[0].amount != self.blockreward:
-            return False
+
         for transaction in block.transactions[1:]:
             print(transaction.tx_to_string())
-            if not self.transaction_valid(transaction,self.mining_address):#TODO:Replace with Marks updated transaction
+            if not self.transaction_valid(transaction,self.mining_address):
+                print("Invalid transaction")
                 return False
         return True
 
@@ -116,7 +124,7 @@ class Node(object):
                 self.balance_ledger[_output.to_public_key] += _output.value
             else:
                 self.balance_ledger[_output.to_public_key] = _output.value
-            new_input = Input(transaction.get_hash(), _output.to_public_key, _output.signature) #TODO: Check if this is the correct signature to use.
+            new_input = Input(transaction.get_hash(), _output.to_public_key, _output.signature)
             if not _output.to_public_key in self.input_ledger:
                 self.input_ledger[_output.to_public_key] = {}
             self.input_ledger[_output.to_public_key][new_input.get_hash()] = _output.value
@@ -138,7 +146,7 @@ class Node(object):
                 self.adjustDifficulty(block)
 
     def transaction_valid(self, transaction, from_public_key):
-        return self.transaction_history_valid(transaction.inputs, transaction.outputs, transaction.amount, from_public_key) and self.sig_valid(signature,message,from_public_key)
+        return self.transaction_history_valid(transaction.inputs, transaction.outputs, transaction.amount, from_public_key) and self.sig_valid(transaction.signature,transaction.message,from_public_key)
 
     def transaction_history_valid(self, input_list, output_list, value, from_public_key):
         balance_in = 0
@@ -202,19 +210,21 @@ class Node(object):
     """
     difficulty adjustment methods
     """
-    def validate_hash_difficulty(self, hash):
+    def validate_hash_difficulty(self, hex_str):
+        hash = bytearray.fromhex(hex_str)
+        byte_idx = math.floor(self.block_difficulty/8)
+        for byte in hash[:byte_idx]:
+            if byte > 0:
+                return False
+        if hash[byte_idx] < 2 ** (8 - (self.block_difficulty % 8)) - 1:
+            return True
+
         if self.block_difficulty == 0:
             return True
 
-        correct_leading_zeroes = ""
-        for i in range(0, self.block_difficulty):
-            correct_leading_zeroes += "0"
+        return False
 
-        hash_difficulty_characters = hash[0:self.block_difficulty]
-        return correct_leading_zeroes >= hash_difficulty_characters
-
-
-    def adjustDifficulty(self, c_block):
+    def adjust_difficulty(self, c_block):
         average_time = self.getAverageBlockTime(self.getBlockTimesList(c_block))
         if average_time > self.expected_time_between_blocks+self.time_threshold_seconds:
             self.block_difficulty -= 1 #Make it easier
@@ -245,7 +255,7 @@ class Node(object):
     
     def genesis(self):
         first_output = Output(self.mining_address, self.blockreward, self.mining_sk.sign((str(self.mining_address) + str(self.blockreward)).encode('utf-8')))
-        first_transaction = Transaction(self.mining_sk.sign(b"coinbase"),[],[first_output],"coinbase",self.blockreward,coinbase=True)
+        first_transaction = Transaction(self.mining_sk.sign(b"coinbase"),[],[first_output],"coinbase",self.blockreward, "",coinbase=True)
         transactions = [first_transaction]
         tree = MerkleTree(list_of_transactions=transactions)
         tree.create_tree()

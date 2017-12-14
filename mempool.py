@@ -5,7 +5,7 @@ class mempool:
         self.tx_set = set([])
         input_txs = []
         for tx in txs:
-            input_txs.append(1./tx.price_of_byte(),tx)
+            input_txs.append(1./tx.fee_per_byte(),tx)
             self.tx_set.add(tx)
 
         self.heap = heapify(input_txs)
@@ -15,7 +15,7 @@ class mempool:
 
     def push_tx(self, tx):
         self.tx_set.add(tx)
-        heappush(self.heap,(1./tx.price_of_byte(),tx))
+        heappush(self.heap,(1./tx.fee_per_byte(),tx))
 
     def pop_tx(self):
         try:
@@ -28,7 +28,7 @@ class mempool:
     def remove_items(self, tx_list):
         for tx in tx_list:
             if tx in self.tx_set:
-                self.heap.remove((1./tx.price_of_byte(), tx))
+                self.heap.remove((1./tx.fee_per_byte(), tx))
                 self.tx_set.remove(tx)
         if not isinstance(self.heap, list):
             self.heap = []
@@ -45,7 +45,7 @@ class mempool:
         else:
             return []
 
-    def threshold_pop_tx(self, threshold, tx):
+    def threshold_pop_tx(self, size_threshold):
         if(heap[0][1].size() < threshold):
             return self.pop_tx()
         else:
