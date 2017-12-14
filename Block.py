@@ -89,4 +89,4 @@ if __name__ == '__main__':
     print()
     print("block.block_header_string(): "+block.block_header_string())
     print()
-    print("block.transaction_list_string(): "+str(block.transaction_list()))
+    print("block.transaction_list_string(): "+str(block._transaction_list()))
