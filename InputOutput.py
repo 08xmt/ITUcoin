@@ -7,12 +7,14 @@ from collections import defaultdict
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
-class LoadBlockchain:
+class Input_Output:
     folder_name = dir_path + "/blocks/"
     blocks_pr_file = 1000
     file_ending = ".json"
-
-
+    
+    def __init__(self, path_extension=""):
+        self.folder_name = self.folder_name + path_extension
+    
     #public methods
     def insert_blocks(self, blocks):
         file_names = self._get_file_names(blocks)
@@ -24,17 +26,18 @@ class LoadBlockchain:
 
     # Uses linecache. It takes the filelocation using folder_name and appending the filename. Then, using the _get_block_line finds which line in the text the block number exists in
     def get_block(self, block_number):
-        block_string = linecache.getline(self.folder_name + self._get_filename(block_number),
+        try:
+            block_string = linecache.getline(self.folder_name + self._get_filename(block_number),
                                              self._get_block_line(block_number)).strip()
-
-        return self.json_block_to_block_object(block_string)
+            return self.json_block_to_block_object(block_string)
+        except:
+            return self.get_newest_block()
 
     #baj = block as jsonn
     def json_block_to_block_object(self, block_string):
         b_json = json.loads(block_string)
         keys = list(b_json.keys())
         baj = b_json[str(keys[0])]
-        print(baj)
         block = Block(nonce=baj['nonce'], block_header_hash=baj['block_header_hash'],
                       previous_block_header_hash=baj['previous_block_header_hash'],
                       transactions=baj['transactions'], block_height=baj['block_height'], time=baj['time'])
@@ -73,7 +76,6 @@ class LoadBlockchain:
         file = open(file_name, "a")
         for block in block_list:
             writeable_block_dict = json.dumps({block.block_height: block.to_dict()})
-            print(writeable_block_dict)
             file.write(str(writeable_block_dict)+"\n")
         file.close()
 
@@ -96,6 +98,6 @@ class LoadBlockchain:
 
 if __name__ == '__main__':
     block = Block(1, "heeej", "heeejsa", [], 1500, 123456)
-    blockchaon = LoadBlockchain()
+    blockchaon = Input_Output()
     blockchaon.insert_blocks([block])
     blockchaon.get_newest_block()
