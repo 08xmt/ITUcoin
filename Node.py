@@ -50,7 +50,7 @@ class Node(object):
                     if self.mining_process.is_alive():
                         self.mining_process.terminate()
                     self.add_block(payload)
-                    self.mempool.remove_items(payload.transaction_list())
+                    self.mempool.remove_items(payload._transaction_list())
                     self.get_state()
                     self.mine(self.mempool.get_transactions(10))
             elif message == 'new tx':
@@ -254,7 +254,7 @@ class Node(object):
     
     def genesis(self):
         first_output = Output(self.mining_address, self.blockreward, self.mining_sk.sign((str(self.mining_address) + str(self.blockreward)).encode('utf-8')))
-        first_transaction = Transaction(self.mining_sk.sign(b"coinbase"),[],[first_output],"coinbase",self.blockreward,coinbase=True)
+        first_transaction = Transaction(self.mining_sk.sign(b"coinbase"),[],[first_output],"coinbase",self.blockreward, "",coinbase=True)
         transactions = [first_transaction]
         tree = MerkleTree(list_of_transactions=transactions)
         tree.create_tree()

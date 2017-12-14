@@ -45,7 +45,7 @@ class mempool:
         else:
             return []
 
-    def threshold_pop_tx(self, threshold, tx):
+    def threshold_pop_tx(self, size_threshold):
         if(heap[0][1].size() < threshold):
             return self.pop_tx()
         else:
