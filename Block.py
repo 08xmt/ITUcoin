@@ -35,7 +35,7 @@ class Block:
                 "nonce": self.nonce,
                 "block_header_hash": self.block_header_hash,
                 "previous_block_header_hash": self.previous_block_header_hash,
-                "transactions": self.transaction_list(),
+                "transactions": self._transaction_list(),
                 "block_height": self.block_height,
                 "time": self.time}
 
@@ -60,7 +60,7 @@ class Block:
                 "block_height": self.block_height}
         return json.dumps(dict)
 
-    def transaction_list(self):
+    def _transaction_list(self):
         transactions_list = []
         for transaction in self.transactions:
             transactions_list.append(transaction.tx_to_string())
