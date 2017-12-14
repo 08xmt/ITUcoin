@@ -54,7 +54,7 @@ class Node(object):
                     self.get_state()
                     self.mine(self.mempool.get_transactions(10))
             elif message == 'new tx':
-                if transaction_valid(payload):
+                if self.transaction_valid(payload):
                     self.add_transaction()
             elif message[0:5] == 'get b':
                 block_id = int(message[6:])
@@ -93,8 +93,14 @@ class Node(object):
         if not block.transactions[0].coinbase:
             print("First transaction not coinbase")
             return False
+
+        #Test hash difficulty
+        if not self.validate_hash_difficulty(block.block_header_hash):
+            return False
         # Check if rest of blocks are valid
         print("Testing transaction validity")
+        if not block.transactions[0].coinbase or block.transactions[0].amount != self.blockreward:
+            return False
         for transaction in block.transactions[1:]:
             print(transaction.tx_to_string())
             if not self.transaction_valid(transaction,self.mining_address):#TODO:Replace with Marks updated transaction
@@ -158,7 +164,7 @@ class Node(object):
                 return False
         return True
 
-    def sig_valid(self, signature, message, public_key):
+    def sig_valid(self, sig, message, public_key):
         vk = VerifyingKey.from_string(bytes.fromhex(public_key), curve=ecdsa.SECP256k1)
         return vk.verify(bytes.fromhex(sig), message)
 
@@ -169,7 +175,7 @@ class Node(object):
         input_list = []
         output_list = []
 
-        for prev_tx, prev_tx_value in balance_ledger[from_public_key]:
+        for prev_tx, prev_tx_value in self.balance_ledger[from_public_key]:
             tx_sig = sk.sign(str(prev_tx) + str(from_public_key))
             _input = Input(prev_tx, from_public_key, tx_sig)
             input_list.append(_input)
@@ -187,24 +193,11 @@ class Node(object):
         fee_sig = sk.sign(str(True) + str(self.value))
         output_list.append(Output(from_public_key, tx_fee, fee_sig))
 
-        return Transaction(signature, input_list, output_list, message)
+        return Transaction(sig, input_list, output_list, message)
 
     def generate_and_add_transaction(self, private_key, from_public_key, to_public_key, amount, tx_fee, message = b"ITUCOIN"):
         tx = self.generate_transaction(private_key, from_public_key, to_public_key, amount, tx_fee, message)
         self.add_transaction(tx)
-
-    def hash_valid(self, hash, nBits):
-        print("Hash valid:")
-        print(hash)
-        if not self.validate_hash_difficulty(hash):
-            return False
-        byte_idx = math.floor(nBits/8)
-        for byte in hash[:byte_idx]:
-            if byte > 0:
-                return False
-        if hash[byte_idx] < 2 ** (8 - (self.block_difficulty % 8)) - 1:
-            return True
-        return False
 
 
     """
@@ -231,7 +224,6 @@ class Node(object):
         return self.block_difficulty
 
     def getBlockTimesList(self, c_block):
-        #io = LoadBlockchain() TODO: Is this important? Doesn't exist.
         height = c_block.block_height
         times = []
         for block_number in range(height - self.blocks_between_difficulty_check, height):
