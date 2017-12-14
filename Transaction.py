@@ -19,17 +19,12 @@ class Transaction:
     @classmethod
     def create_from_string(cls, transaction_as_string):
         tx = transaction_as_string
-        print(tx)
         if isinstance(transaction_as_string, bytes):
             tx = tx.decode()
         tx_dict = json.loads(tx)
-        print(tx_dict)
         tx_dict = next(iter(tx_dict.values()))
         
         #Last input and output will always be whitespace
-        print(tx_dict)
-        print(type(tx_dict))
-        print(tx_dict["inputs"].split("|"))
         inputs = [Input.load_from_string(i) for i in tx_dict["inputs"].split("|")[:-1]]
         outputs = [Output.load_from_string(i) for i in tx_dict["outputs"].split("|")[:-1]]
         
@@ -42,9 +37,8 @@ class Transaction:
                            message=tx_dict['message'],
                            amount=tx_dict['amount'],
                            address=tx_dict['address'],
-                           locktime=tx_dict['locktime'],
                            coinbase=tx_dict['coinbase'],
-                           fee_pr_byte=tx_dict['fee_pr_byte'])
+                           tx_fee=tx_dict['tx_fee'])
 
 
     def __str__(self):
@@ -58,7 +52,7 @@ class Transaction:
             string_inputs += str(_input)
         for output in self.outputs:
             string_outputs += str(output)
-        hasher.update((str(self.locktime) + str(self.message) + str(self.signature) + string_inputs + string_outputs).encode('utf-8'))
+        hasher.update((str(self.message) + str(self.signature) + string_inputs + string_outputs).encode('utf-8'))
         return hasher.hexdigest()
 
     def get_as_dict(self):
@@ -71,7 +65,7 @@ class Transaction:
         for output in self.outputs:
             tx_outputs.append(output.as_list())
 
-        transaction_dict = {"locktime": self.locktime, "inputs": tx_inputs, "outputs": tx_outputs, "signature":
+        transaction_dict = {"inputs": tx_inputs, "outputs": tx_outputs, "signature":
                             self.signature, "message": self.message, "amount": self.amount, 'address': self.address, "coinbase": self.coinbase, "fee_pr_byte": self.fee_pr_byte}
         return {self.get_hash(), transaction_dict}
 
@@ -95,8 +89,7 @@ class Transaction:
         for output in self.outputs:
             tx_outputs += output.as_string() + "|"
 
-        transaction_dict = {"locktime": self.locktime,
-                            "inputs": tx_inputs,
+        transaction_dict = {"inputs": tx_inputs,
                             "outputs": tx_outputs,
                             "signature": self.signature,
                             "message": self.message,

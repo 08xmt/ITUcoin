@@ -1,7 +1,6 @@
 import asyncio
 import hashlib
 from Node import Node
-from miner import Miner
 from Transaction import *
 from Block import Block
 import codecs
@@ -16,54 +15,28 @@ class cli:
      
         sk = SigningKey.generate(curve=ecdsa.SECP256k1)
         vk = sk.get_verifying_key()
-        sk_hex = codecs.encode(sk.to_string(), 'hex').decode("utf-8")
-        vk_hex = codecs.encode(vk.to_string(), 'hex').decode("utf-8")
-        tx1 = Transaction(signature="Signature1",
-                      input_list=[Input("p_tx_hash", "pubkey", "signature"),
-                                  Input("p_tx_hash", "pubkey", "signature")],
-                      output_list=[Output("pubkey", 100, "signature"),
-                                   Output("pubkey", 100, "signature"),
-                                   Output("pubkey", 100, "signature")],
-                      message="This is a message",
-                      amount=1000)
-        tx2 = Transaction(signature="Signature1",
-                      input_list=[Input("p_tx_hash", "pubkey", "signature"),
-                                  Input("p_tx_hash", "pubkey", "signature")],
-                      output_list=[Output("pubkey", 100, "signature"),
-                                   Output("pubkey", 100, "signature"),
-                                   Output("pubkey", 100, "signature")],
-                      message="This is a message",
-                      amount=1000)
-        tx3 = Transaction(signature="Signature1",
-                      input_list=[Input("p_tx_hash", "pubkey", "signature"),
-                                  Input("p_tx_hash", "pubkey", "signature")],
-                      output_list=[Output("pubkey", 100, "signature"),
-                                   Output("pubkey", 100, "signature"),
-                                   Output("pubkey", 100, "signature")],
-                      message="This is a message",
-                      amount=1000)
-
-        block = Block(213,"headerHas", "otherheaderhash", [tx1, tx2, tx3], 16, 132456789)
-
-        self.miner = Miner(vk_hex, sk_hex, block.transaction_list(),block,("127.0.0.1",10000),10)
+        self.sk_hex = codecs.encode(sk.to_string(), 'hex').decode("utf-8")
+        self.vk_hex = codecs.encode(vk.to_string(), 'hex').decode("utf-8")
         self.loop = asyncio.get_event_loop()
         self.loop.call_soon(self.main)
         self.loop.run_forever()
             
     def main(self):
-        console = input("""Welcome to the ITUcoin self.node software:
-        [0]: Start mining self.node
-        [1]: Start auditing self.node
-        [2]: Sync to network
-        [3]: Make transfer\n""")
+        console = input("""Welcome to the ITUcoin Node software:
+        [0]: Start mining node
+        [1]: Start auditing node
+        [2]: Make transfer\n""")
         if console == "0":
+            port=int(input("Which port would you like to use?"))
             print("Starting mining")
-            self.loop.call_soon(self.mine)
+            self.node = Node(self.vk_hex, self.sk_hex, listening_port=port,genesis=True)
+            self.loop.call_soon(self.node.main)
         elif console == "1":
-            print("Process is alive: " + str(self.mining_process.is_alive()))
+            port=int(input("Which port would you like to use?"))
+            print("Starting auditing node.")
+            self.node = Node(self.vk_hex, self.sk_hex, listening_port=port,genesis=False)
+            self.loop.call_soon(self.node.main)
         elif console == "2":
-            print("Syncing not yet implemented.")
-        elif console == "3":
             print("Queueing transaction:")
             self.parse_transaction()
         else:
@@ -82,14 +55,6 @@ class cli:
                 prev = temp
                 print(steps, current)
             return current
-
-    def mine(self):
-        self.mining_process = multiprocessing.Process(target=self.miner.main, args=())
-        self.mining_process.start()
-        print("Waiting 20 to kill process.")
-        time.sleep(20)
-        self.mining_process.terminate()
-        print("Process is alive: " + str(self.mining_process.is_alive()))
 
     def parse_transaction(self):
         private_key = ""
@@ -127,12 +92,6 @@ class cli:
         print(message)
         self.node.generate_and_add_transaction(private_key, from_pub_key, to_pub_key, amount, tx_fee, message=message)
         self.loop.call_soon(self.main)
-
-    def audit(self, daemon):
-        pass
-
-    def sync(self):
-        pass
 
 if __name__ == '__main__':
     cli = cli()
