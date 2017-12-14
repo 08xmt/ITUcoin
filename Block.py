@@ -12,11 +12,15 @@ class Block:
         self.block_height = block_height
         merkle_tree = MerkleTree()
         merkle_tree.list_of_transactions = self.transactions
-        merkle_tree.create_tree
+        merkle_tree.create_tree()
         self.merkle_tree = merkle_tree
+
+    #def __str__(self):
+        #return str(self.time) + "," + str(self.nonce) + "," + self.previous_block_header_hash + "," + self.block_header_hash
 
     @classmethod
     def create_from_string(cls, header_string, transaction_list):
+        print(header_string)
         dict = json.loads(header_string)
         return Block(dict['nonce'],
                      dict['block_header_hash'],
@@ -27,7 +31,6 @@ class Block:
 
 
     def to_dict(self):
-
         dict = {"time": self.time,
                 "nonce": self.nonce,
                 "block_header_hash": self.block_header_hash,
@@ -42,6 +45,14 @@ class Block:
         return json.dumps(self.to_dict())
 
     def block_header_string(self):
+        if isinstance(self.block_header_hash,bytes):
+            self.block_header_hash = self.block_header_hash.decode()
+        if isinstance(self.previous_block_header_hash, bytes):
+            self.previous_block_header_hash = self.previous_block_header_hash.decode()
+        if isinstance(self.nonce, bytes):
+            self.nonce = int.from_bytes(self.nonce,byteorder='big')
+
+
         dict = {"time": self.time,
                 "nonce": self.nonce,
                 "block_header_hash": self.block_header_hash,
