@@ -86,7 +86,6 @@ class Node(object):
                 self.mepool.push_tx(tx)
     
     def valid_block(self, block):
-        # First transaction needs to be a coinbase transaction
         print("Testing block validity")
         if block.block_height == 0 and block.block_header_hash == "genesis":
             return True
@@ -212,7 +211,7 @@ class Node(object):
             correct_leading_zeroes += "0"
 
         hash_difficulty_characters = hash[0:self.block_difficulty]
-        return correct_leading_zeroes == hash_difficulty_characters
+        return correct_leading_zeroes >= hash_difficulty_characters
 
 
     def adjustDifficulty(self, c_block):
